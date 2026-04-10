@@ -1,0 +1,460 @@
+<!-- Gig Booking -->
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@600;700&amp;family=Noto+Serif:wght@400;700;800&amp;family=Inter:wght@300;400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          "colors": {
+                  "surface-container": "#201f1f",
+                  "outline-variant": "#4d4635",
+                  "surface-container-low": "#1c1b1b",
+                  "tertiary": "#cfcecc",
+                  "inverse-primary": "#735c00",
+                  "on-secondary-fixed-variant": "#57441d",
+                  "on-secondary": "#3e2e08",
+                  "on-tertiary-fixed": "#1b1c1b",
+                  "surface-bright": "#3a3939",
+                  "inverse-surface": "#e5e2e1",
+                  "on-error": "#690005",
+                  "on-primary-container": "#554300",
+                  "error": "#ffb4ab",
+                  "on-primary-fixed": "#241a00",
+                  "on-secondary-container": "#ccb281",
+                  "tertiary-fixed": "#e3e2e0",
+                  "surface": "#131313",
+                  "on-tertiary": "#303130",
+                  "on-error-container": "#ffdad6",
+                  "tertiary-container": "#b3b3b1",
+                  "on-primary": "#3c2f00",
+                  "secondary-fixed-dim": "#dfc391",
+                  "primary": "#f2ca50",
+                  "tertiary-fixed-dim": "#c7c6c4",
+                  "on-primary-fixed-variant": "#574500",
+                  "on-surface-variant": "#d0c5af",
+                  "background": "#131313",
+                  "on-background": "#e5e2e1",
+                  "on-secondary-fixed": "#261900",
+                  "primary-fixed": "#ffe088",
+                  "error-container": "#93000a",
+                  "surface-variant": "#353534",
+                  "surface-container-highest": "#353534",
+                  "surface-container-high": "#2a2a2a",
+                  "on-tertiary-container": "#444544",
+                  "surface-tint": "#e9c349",
+                  "primary-container": "#d4af37",
+                  "primary-fixed-dim": "#e9c349",
+                  "inverse-on-surface": "#313030",
+                  "on-surface": "#e5e2e1",
+                  "secondary-fixed": "#fcdfab",
+                  "surface-dim": "#131313",
+                  "secondary": "#dfc391",
+                  "surface-container-lowest": "#0e0e0e",
+                  "outline": "#99907c",
+                  "on-tertiary-fixed-variant": "#464746"
+          },
+          "borderRadius": {
+                  "DEFAULT": "0.25rem",
+                  "lg": "0.5rem",
+                  "xl": "0.75rem",
+                  "full": "9999px"
+          },
+          "fontFamily": {
+                  "headline": ["Noto Serif"],
+                  "body": ["Inter"],
+                  "label": ["Inter"]
+          }
+        },
+      },
+    }
+  </script>
+<style>
+    .glass-sidebar {
+      background: rgba(23, 23, 23, 0.6);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+    }
+    .audio-wave {
+      mask-image: linear-gradient(to right, black 30%, transparent 100%);
+    }
+    .custom-scrollbar::-webkit-scrollbar {
+      width: 4px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-track {
+      background: #131313;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+      background: #4d4635;
+      border-radius: 10px;
+    }
+    .material-symbols-outlined {
+      font-variation-settings: 'FILL' 0, 'wght' 300, 'GRAD' 0, 'opsz' 24;
+    }
+  </style>
+</head>
+<body class="bg-background text-on-surface font-body selection:bg-primary selection:text-on-primary">
+<!-- TopNavBar Shell -->
+<nav class="fixed top-0 w-full z-50 bg-neutral-900/60 backdrop-blur-xl flex justify-between items-center px-8 h-20 max-w-full mx-auto shadow-2xl shadow-black/50">
+<div class="text-2xl font-bold tracking-tighter text-[#f2ca50] font-noto-serif">NOCTURNE</div>
+<div class="hidden md:flex items-center gap-10 font-noto-serif text-sm tracking-tight">
+<a class="text-[#d0c5af] hover:text-[#f2ca50] transition-colors" href="#">Discovery</a>
+<a class="text-[#f2ca50] border-b border-[#d4af37] pb-1 font-semibold" href="#">Vibe Search</a>
+<a class="text-[#d0c5af] hover:text-[#f2ca50] transition-colors" href="#">Profile</a>
+</div>
+<div class="flex items-center gap-6">
+<button class="text-[#d0c5af] hover:text-[#f2ca50] transition-all scale-95 active:duration-150">
+<span class="material-symbols-outlined">notifications</span>
+</button>
+<button class="text-[#d0c5af] hover:text-[#f2ca50] transition-all scale-95 active:duration-150">
+<span class="material-symbols-outlined">favorite</span>
+</button>
+<div class="h-10 w-10 rounded-full bg-surface-container-highest overflow-hidden border border-outline-variant/20">
+<img alt="VIP User Profile" data-alt="close-up portrait of a stylish woman with sophisticated makeup in dramatic low light with warm golden reflections" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBaaOkBkG9zZoUvz57EV1Hy08B57V3V3uJJvYFqrCi6MEOEE2SezLp7hly_69OD4DtDgXrMjYLiW5sNTTSJExG6amRHV83rBkG-82ssP28ZBxy1QqnG_UXub9tgja2fFrVw6ySUCTkvzJy_kH4xRijbk_fl6R4Zwcnv3htRSLHrx_5h7FORVOmj5lFF7peh7jE1b3lRcMmNA4B81_sejirYPCHzF0ZInOanHPeFvY70aNBIieG3Eqkz_hpnQeb8F95_rzVdxvbrHKY"/>
+</div>
+</div>
+</nav>
+<main class="pt-20 min-h-screen flex">
+<!-- Sticky Left Sidebar -->
+<aside class="hidden lg:block w-[300px] h-[calc(100vh-5rem)] sticky top-20 glass-sidebar border-r border-outline-variant/10 px-6 py-8 overflow-y-auto custom-scrollbar">
+<div class="space-y-10">
+<!-- Suno AI Matchmaker Section -->
+<section>
+<div class="flex items-center gap-2 mb-4">
+<span class="material-symbols-outlined text-primary" style="font-variation-settings: 'FILL' 1;">storm</span>
+<h3 class="text-xs font-bold tracking-widest uppercase text-on-surface-variant">Vibe Intelligence</h3>
+</div>
+<div class="relative">
+<textarea class="w-full bg-surface-container-lowest border-none rounded-xl p-4 text-sm text-on-surface placeholder:text-outline focus:ring-1 focus:ring-primary/40 resize-none transition-all" placeholder="Describe your desired atmosphere... e.g. 'Melodic techno for a sunset rooftop in Ibiza'" rows="4"></textarea>
+<button class="absolute bottom-3 right-3 p-2 bg-primary rounded-lg text-on-primary hover:scale-105 transition-transform">
+<span class="material-symbols-outlined text-sm">auto_awesome</span>
+</button>
+</div>
+</section>
+<!-- BPM Filter -->
+<section>
+<div class="flex justify-between items-center mb-6">
+<h3 class="text-xs font-bold tracking-widest uppercase text-on-surface-variant">Tempo Range</h3>
+<span class="text-primary font-mono text-xs">124 - 138 BPM</span>
+</div>
+<div class="relative h-6 flex items-center">
+<div class="absolute w-full h-1 bg-surface-container-highest rounded-full"></div>
+<div class="absolute left-1/4 right-1/4 h-1 bg-primary rounded-full"></div>
+<div class="absolute left-1/4 w-4 h-4 bg-primary border-2 border-on-primary rounded-full -ml-2 cursor-pointer shadow-lg shadow-primary/20"></div>
+<div class="absolute right-1/4 w-4 h-4 bg-primary border-2 border-on-primary rounded-full -mr-2 cursor-pointer shadow-lg shadow-primary/20"></div>
+</div>
+</section>
+<!-- Setup Toggles -->
+<section>
+<h3 class="text-xs font-bold tracking-widest uppercase text-on-surface-variant mb-6">Setup Preference</h3>
+<div class="space-y-3">
+<label class="flex items-center justify-between cursor-pointer group">
+<span class="text-sm text-on-surface-variant group-hover:text-on-surface transition-colors">Digital (CDJ)</span>
+<input checked="" class="rounded-sm bg-surface-container-lowest border-outline-variant text-primary focus:ring-primary/20" type="checkbox"/>
+</label>
+<label class="flex items-center justify-between cursor-pointer group">
+<span class="text-sm text-on-surface-variant group-hover:text-on-surface transition-colors">Analog (Vinyl)</span>
+<input class="rounded-sm bg-surface-container-lowest border-outline-variant text-primary focus:ring-primary/20" type="checkbox"/>
+</label>
+<label class="flex items-center justify-between cursor-pointer group">
+<span class="text-sm text-on-surface-variant group-hover:text-on-surface transition-colors">Live Hybrid</span>
+<input checked="" class="rounded-sm bg-surface-container-lowest border-outline-variant text-primary focus:ring-primary/20" type="checkbox"/>
+</label>
+</div>
+</section>
+<!-- Price Range -->
+<section>
+<h3 class="text-xs font-bold tracking-widest uppercase text-on-surface-variant mb-6">Fee Tier</h3>
+<div class="grid grid-cols-3 gap-2">
+<button class="py-2 text-[10px] border border-outline-variant/30 rounded text-on-surface-variant hover:border-primary hover:text-primary transition-all">BOUTIQUE</button>
+<button class="py-2 text-[10px] border border-primary bg-primary/10 rounded text-primary font-bold">PREMIUM</button>
+<button class="py-2 text-[10px] border border-outline-variant/30 rounded text-on-surface-variant hover:border-primary hover:text-primary transition-all">ELITE</button>
+</div>
+</section>
+</div>
+</aside>
+<!-- Results Area -->
+<div class="flex-1 px-4 md:px-12 py-8 bg-surface-dim">
+<!-- Header -->
+<header class="mb-12">
+<h1 class="text-4xl md:text-6xl font-headline font-bold text-on-surface tracking-tight mb-4">Festival Energy</h1>
+<p class="text-on-surface-variant max-w-2xl font-light leading-relaxed">
+          Curating the pulse of the night. 42 Artists found matching your atmosphere: <span class="italic text-on-surface">"Driving deep techno with ethereal vocal layers."</span>
+</p>
+</header>
+<!-- Results Grid (Rows as requested) -->
+<div class="space-y-6">
+<!-- Result Item 1 -->
+<article class="group bg-surface-container-high hover:bg-surface-bright transition-all duration-300 rounded-2xl overflow-hidden p-6 flex flex-col md:flex-row items-center gap-8 border-l-2 border-transparent hover:border-primary shadow-xl">
+<div class="relative shrink-0">
+<div class="w-24 h-24 rounded-full overflow-hidden border-2 border-outline-variant/30 group-hover:border-primary transition-colors">
+<img alt="DJ Headshot" class="w-full h-full object-cover" data-alt="professional portrait of a male DJ with headphones around his neck in a moody dark studio setting with teal and gold rim lighting" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCOIrh7IfYfaqEXKQrW4kqKR2KEbAH6KOA9zb2OsyCXqal9IycJ1kv8nqpbZoi6HK9uiZQc0_Xx7HeH6ZoPVMEntTI0R2osLuM4kU2p1WT7rRwkNnoonk6zuNZHjorFYHLCLK5XZ1-wXYVeZJ2X6oR2lzzy98OKIkZLFjH0F6sJJdwQ3YuwmOFcnFf_1lh87RVg-jvtaH65QNVTSvplCy0MCBJvTZVPRnFV9KTc5vr0lQop4dNc3eaXmc5S3ydneU1VbHYUkgGeMX8"/>
+</div>
+<div class="absolute -bottom-2 -right-2 bg-primary text-on-primary text-[10px] font-bold px-2 py-1 rounded">PRO</div>
+</div>
+<div class="flex-1 min-w-0">
+<div class="flex items-center gap-3 mb-1">
+<h2 class="text-xl font-headline font-semibold text-on-surface truncate">SOREN ØRSK</h2>
+<span class="text-xs text-primary bg-primary/10 px-2 py-0.5 rounded-full border border-primary/20">LIVE HYBRID</span>
+</div>
+<p class="text-sm text-on-surface-variant mb-4 uppercase tracking-widest font-medium">Deep Melodic / Industrial</p>
+<!-- Gold Audio Waveform -->
+<div class="h-10 flex items-end gap-0.5 w-full max-w-sm audio-wave opacity-60 group-hover:opacity-100 transition-opacity">
+<div class="w-1 bg-primary-container h-4"></div>
+<div class="w-1 bg-primary-container h-6"></div>
+<div class="w-1 bg-primary-container h-8"></div>
+<div class="w-1 bg-primary h-10"></div>
+<div class="w-1 bg-primary h-6"></div>
+<div class="w-1 bg-primary-container h-7"></div>
+<div class="w-1 bg-primary-container h-4"></div>
+<div class="w-1 bg-primary-container h-5"></div>
+<div class="w-1 bg-primary h-9"></div>
+<div class="w-1 bg-primary h-6"></div>
+<div class="w-1 bg-primary h-4"></div>
+<div class="w-1 bg-primary-container h-2"></div>
+<div class="w-1 bg-primary h-5"></div>
+<div class="w-1 bg-primary h-8"></div>
+<div class="w-1 bg-primary-container h-6"></div>
+<div class="w-1 bg-primary-container h-4"></div>
+</div>
+</div>
+<div class="shrink-0 flex flex-col items-center md:items-end gap-2">
+<div class="text-sm text-on-surface font-mono tracking-tighter mb-2">FROM $2,400</div>
+<button class="bg-gradient-to-br from-primary to-primary-container text-on-primary px-8 py-3 rounded-lg font-bold text-sm tracking-widest hover:scale-105 transition-transform shadow-lg shadow-primary/20">
+              BOOK
+            </button>
+</div>
+</article>
+<!-- Result Item 2 -->
+<article class="group bg-surface-container-high hover:bg-surface-bright transition-all duration-300 rounded-2xl overflow-hidden p-6 flex flex-col md:flex-row items-center gap-8 border-l-2 border-transparent hover:border-primary shadow-xl">
+<div class="relative shrink-0">
+<div class="w-24 h-24 rounded-full overflow-hidden border-2 border-outline-variant/30 group-hover:border-primary transition-colors">
+<img alt="DJ Headshot" class="w-full h-full object-cover" data-alt="close up profile of a female artist with silver hair performing at a mixing desk in a hazy club atmosphere with purple and amber neon lights" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDAXkAQmR0tnBmd1WyBdbigiRtK70NMvHSgKNpCLfTZLwxEk_u_IEQM75msCQMayHo0WkNh5b26qVQNG_psq5ZHPG2LBcRdboD73rzChyRXGsYynLh0-n4quKn81QbvKmcSPdkQUggVE6b1yrmfyZyyHGXA-JeUKFG9GuoK1Ws_bPXQHWOV5EYZD63xSXbnptNQq-TQkE5jPyUmK89RkvUhBcO36Zl7OA96G_jEldyqV7zSYToj9anzyxeIQRcW_Y3M0MpYrlCinD0"/>
+</div>
+</div>
+<div class="flex-1 min-w-0">
+<div class="flex items-center gap-3 mb-1">
+<h2 class="text-xl font-headline font-semibold text-on-surface truncate">EVELINA VOSS</h2>
+<span class="text-xs text-on-surface-variant bg-surface-container-highest px-2 py-0.5 rounded-full border border-outline-variant/30">VINYL ONLY</span>
+</div>
+<p class="text-sm text-on-surface-variant mb-4 uppercase tracking-widest font-medium">Progressive House / Peak Time</p>
+<div class="h-10 flex items-end gap-0.5 w-full max-w-sm audio-wave opacity-60 group-hover:opacity-100 transition-opacity">
+<div class="w-1 bg-primary h-2"></div>
+<div class="w-1 bg-primary h-4"></div>
+<div class="w-1 bg-primary h-3"></div>
+<div class="w-1 bg-primary h-8"></div>
+<div class="w-1 bg-primary h-9"></div>
+<div class="w-1 bg-primary-container h-7"></div>
+<div class="w-1 bg-primary-container h-5"></div>
+<div class="w-1 bg-primary h-8"></div>
+<div class="w-1 bg-primary h-10"></div>
+<div class="w-1 bg-primary h-6"></div>
+<div class="w-1 bg-primary h-4"></div>
+<div class="w-1 bg-primary-container h-2"></div>
+<div class="w-1 bg-primary h-5"></div>
+<div class="w-1 bg-primary h-8"></div>
+<div class="w-1 bg-primary-container h-6"></div>
+<div class="w-1 bg-primary-container h-3"></div>
+</div>
+</div>
+<div class="shrink-0 flex flex-col items-center md:items-end gap-2">
+<div class="text-sm text-on-surface font-mono tracking-tighter mb-2">FROM $1,850</div>
+<button class="bg-gradient-to-br from-primary to-primary-container text-on-primary px-8 py-3 rounded-lg font-bold text-sm tracking-widest hover:scale-105 transition-transform shadow-lg shadow-primary/20">
+              BOOK
+            </button>
+</div>
+</article>
+<!-- Result Item 3 -->
+<article class="group bg-surface-container-high hover:bg-surface-bright transition-all duration-300 rounded-2xl overflow-hidden p-6 flex flex-col md:flex-row items-center gap-8 border-l-2 border-transparent hover:border-primary shadow-xl">
+<div class="relative shrink-0">
+<div class="w-24 h-24 rounded-full overflow-hidden border-2 border-outline-variant/30 group-hover:border-primary transition-colors">
+<img alt="DJ Headshot" class="w-full h-full object-cover" data-alt="artistic silhouette of a performer against a wall of vintage synthesizers and blinking modular gear lights in a dark room" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCWtRc8CV1igJn7YHD26N_aU1U7q-TaONsbGEVT7PyoW7fPQJVRUhVxPDEYVHUsAjbt2ZSCQdPmdsLxcXcxKUQEge1gFOmEoPYTKYuLbiP07brxjlbO19tmyg15SbiaDZM4lVdY-yRgxcYcWbkdEtpEbwpD3GdKJNGqHQY7MQzNjCDuCpOhwOJ9JkyWs1-W_gFoRqDSp2HABO1kt6V8jsvVjeY3GU9Kc4azK_A2ciILrssYx1NpQq36ae2f8wl64Yjbt0Rl2cq2EQE"/>
+</div>
+<div class="absolute -bottom-2 -right-2 bg-primary text-on-primary text-[10px] font-bold px-2 py-1 rounded">HOT</div>
+</div>
+<div class="flex-1 min-w-0">
+<div class="flex items-center gap-3 mb-1">
+<h2 class="text-xl font-headline font-semibold text-on-surface truncate">MODULAR MANTRA</h2>
+<span class="text-xs text-primary bg-primary/10 px-2 py-0.5 rounded-full border border-primary/20">LIVE HYBRID</span>
+</div>
+<p class="text-sm text-on-surface-variant mb-4 uppercase tracking-widest font-medium">Experimental / Ambient Techno</p>
+<div class="h-10 flex items-end gap-0.5 w-full max-w-sm audio-wave opacity-60 group-hover:opacity-100 transition-opacity">
+<div class="w-1 bg-primary h-1"></div>
+<div class="w-1 bg-primary h-2"></div>
+<div class="w-1 bg-primary h-4"></div>
+<div class="w-1 bg-primary h-6"></div>
+<div class="w-1 bg-primary-container h-8"></div>
+<div class="w-1 bg-primary-container h-10"></div>
+<div class="w-1 bg-primary h-7"></div>
+<div class="w-1 bg-primary h-5"></div>
+<div class="w-1 bg-primary h-3"></div>
+<div class="w-1 bg-primary h-5"></div>
+<div class="w-1 bg-primary h-8"></div>
+<div class="w-1 bg-primary h-9"></div>
+<div class="w-1 bg-primary-container h-7"></div>
+<div class="w-1 bg-primary-container h-4"></div>
+<div class="w-1 bg-primary-container h-2"></div>
+<div class="w-1 bg-primary h-1"></div>
+</div>
+</div>
+<div class="shrink-0 flex flex-col items-center md:items-end gap-2">
+<div class="text-sm text-on-surface font-mono tracking-tighter mb-2">FROM $3,200</div>
+<button class="bg-gradient-to-br from-primary to-primary-container text-on-primary px-8 py-3 rounded-lg font-bold text-sm tracking-widest hover:scale-105 transition-transform shadow-lg shadow-primary/20">
+              BOOK
+            </button>
+</div>
+</article>
+</div>
+<!-- Load More Section -->
+<div class="mt-16 text-center">
+<button class="text-on-surface-variant hover:text-primary transition-all uppercase tracking-[0.2em] text-[10px] font-bold">
+          Explore More Talents
+          <span class="block mt-1 h-px w-8 bg-primary mx-auto"></span>
+</button>
+</div>
+</div>
+</main>
+<!-- Footer Shell -->
+<footer class="bg-[#0e0e0e] w-full py-12 px-8 flex flex-col md:flex-row justify-between items-center gap-6 border-t border-[#4d4635]/20">
+<div class="text-lg font-serif text-[#f2ca50]">NOCTURNE</div>
+<div class="flex gap-8 font-inter text-xs tracking-widest uppercase text-[#d0c5af]">
+<a class="hover:text-[#f2ca50] transition-all opacity-80 hover:opacity-100" href="#">Instagram</a>
+<a class="hover:text-[#f2ca50] transition-all opacity-80 hover:opacity-100" href="#">Mixcloud</a>
+<a class="hover:text-[#f2ca50] transition-all opacity-80 hover:opacity-100" href="#">Privacy Policy</a>
+<a class="hover:text-[#f2ca50] transition-all opacity-80 hover:opacity-100" href="#">Terms of Service</a>
+</div>
+<div class="text-[10px] tracking-widest text-[#d0c5af]/50 uppercase font-inter">
+      © 2024 NOCTURNE. Curated with Passion.
+    </div>
+</footer>
+<script>
+const API = '';
+const resultsContainer = document.querySelector('.space-y-6');
+const headerEl = document.querySelector('header.mb-12');
+
+// Fix nav links
+document.querySelectorAll('nav a').forEach(a => {
+  const t = a.textContent.trim();
+  if (t === 'Discovery') a.href = '/discovery.html';
+  else if (t === 'Vibe Search') a.href = '/search.html';
+  else if (t === 'Profile') a.href = '/vibe-search.html';
+});
+
+// Generate random waveform bars
+function waveformHTML() {
+  let bars = '';
+  for (let i = 0; i < 16; i++) {
+    const h = Math.floor(Math.random() * 9) + 2;
+    const cls = Math.random() > 0.4 ? 'bg-primary' : 'bg-primary-container';
+    bars += `<div class="w-1 ${cls} h-${h}"></div>`;
+  }
+  return bars;
+}
+
+// Render DJ result card
+function djCard(dj, score, reasoning) {
+  const setupLabel = {digital: 'DIGITAL', vinyl: 'VINYL ONLY', hybrid: 'LIVE HYBRID'}[dj.setup] || dj.setup?.toUpperCase() || '';
+  const setupClass = dj.setup === 'hybrid' || dj.badge
+    ? 'text-xs text-primary bg-primary/10 px-2 py-0.5 rounded-full border border-primary/20'
+    : 'text-xs text-on-surface-variant bg-surface-container-highest px-2 py-0.5 rounded-full border border-outline-variant/30';
+  const badgeHTML = dj.badge ? `<div class="absolute -bottom-2 -right-2 bg-primary text-on-primary text-[10px] font-bold px-2 py-1 rounded">${dj.badge}</div>` : '';
+  const scoreHTML = score ? `<div class="text-xs text-primary mb-1">${score}% match</div>` : '';
+  const reasonHTML = reasoning ? `<p class="text-xs text-on-surface-variant mt-2 italic">${reasoning}</p>` : '';
+
+  return `
+    <article class="group bg-surface-container-high hover:bg-surface-bright transition-all duration-300 rounded-2xl overflow-hidden p-6 flex flex-col md:flex-row items-center gap-8 border-l-2 border-transparent hover:border-primary shadow-xl">
+      <div class="relative shrink-0">
+        <div class="w-24 h-24 rounded-full overflow-hidden border-2 border-outline-variant/30 group-hover:border-primary transition-colors">
+          <img alt="DJ Headshot" class="w-full h-full object-cover" src="${dj.image_url || ''}"/>
+        </div>
+        ${badgeHTML}
+      </div>
+      <div class="flex-1 min-w-0">
+        <div class="flex items-center gap-3 mb-1">
+          <h2 class="text-xl font-headline font-semibold text-on-surface truncate">${dj.name}</h2>
+          <span class="${setupClass}">${setupLabel}</span>
+        </div>
+        <p class="text-sm text-on-surface-variant mb-4 uppercase tracking-widest font-medium">${dj.tagline || dj.genres?.join(' / ') || ''}</p>
+        ${scoreHTML}
+        <div class="h-10 flex items-end gap-0.5 w-full max-w-sm audio-wave opacity-60 group-hover:opacity-100 transition-opacity">
+          ${waveformHTML()}
+        </div>
+        ${reasonHTML}
+      </div>
+      <div class="shrink-0 flex flex-col items-center md:items-end gap-2">
+        <div class="text-sm text-on-surface font-mono tracking-tighter mb-2">FROM $${(dj.fee_from || 0).toLocaleString()}</div>
+        <a href="/booking.html?dj=${dj.id}" class="bg-gradient-to-br from-primary to-primary-container text-on-primary px-8 py-3 rounded-lg font-bold text-sm tracking-widest hover:scale-105 transition-transform shadow-lg shadow-primary/20 inline-block text-center">
+          BOOK
+        </a>
+      </div>
+    </article>`;
+}
+
+// Render results
+function renderResults(djs, isVibeMatch = false) {
+  resultsContainer.innerHTML = djs.map(item => {
+    if (isVibeMatch) return djCard(item.dj, item.score, item.reasoning);
+    return djCard(item);
+  }).join('');
+}
+
+// Vibe search (AI)
+const vibeBtn = document.querySelector('button .material-symbols-outlined')?.closest('button') ||
+  document.querySelector('aside button');
+const vibeTextarea = document.querySelector('textarea');
+
+if (vibeBtn && vibeTextarea) {
+  vibeBtn.addEventListener('click', async () => {
+    const query = vibeTextarea.value.trim();
+    if (!query) return;
+
+    // Update header
+    if (headerEl) {
+      headerEl.querySelector('h1').textContent = 'Searching...';
+      headerEl.querySelector('p').innerHTML = 'NOCTURNE Vibe Intelligence is analyzing your request...';
+    }
+
+    try {
+      const res = await fetch(`${API}/api/ai/vibe-match`, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({query})
+      });
+      const data = await res.json();
+
+      if (headerEl) {
+        headerEl.querySelector('h1').textContent = 'Vibe Results';
+        const interp = data.query_interpretation || query;
+        const count = data.results?.length || 0;
+        headerEl.querySelector('p').innerHTML =
+          `${count} artists matched your atmosphere: <span class="italic text-on-surface">"${interp}"</span>`;
+      }
+      renderResults(data.results || [], true);
+    } catch (err) {
+      if (headerEl) {
+        headerEl.querySelector('h1').textContent = 'Error';
+        headerEl.querySelector('p').textContent = 'Could not reach the AI engine. Is the server running?';
+      }
+    }
+  });
+}
+
+// Also make existing BOOK buttons link properly
+document.querySelectorAll('article button').forEach(btn => {
+  if (btn.textContent.trim() === 'BOOK') {
+    const name = btn.closest('article')?.querySelector('h2')?.textContent.trim();
+    if (name) {
+      const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').replace('ø', 'o');
+      btn.addEventListener('click', () => window.location.href = `/booking.html?dj=${slug}`);
+    }
+  }
+});
+</script>
+</body></html>

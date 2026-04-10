@@ -1,0 +1,317 @@
+<!-- Design System -->
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&amp;family=Noto+Serif:wght@400;700&amp;family=Cormorant+Garamond:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "surface-container": "#201f1f",
+                        "outline-variant": "#4d4635",
+                        "surface-container-low": "#1c1b1b",
+                        "tertiary": "#cfcecc",
+                        "inverse-primary": "#735c00",
+                        "on-secondary-fixed-variant": "#57441d",
+                        "on-secondary": "#3e2e08",
+                        "on-tertiary-fixed": "#1b1c1b",
+                        "surface-bright": "#3a3939",
+                        "inverse-surface": "#e5e2e1",
+                        "on-error": "#690005",
+                        "on-primary-container": "#554300",
+                        "error": "#ffb4ab",
+                        "on-primary-fixed": "#241a00",
+                        "on-secondary-container": "#ccb281",
+                        "tertiary-fixed": "#e3e2e0",
+                        "surface": "#131313",
+                        "on-tertiary": "#303130",
+                        "on-error-container": "#ffdad6",
+                        "tertiary-container": "#b3b3b1",
+                        "on-primary": "#3c2f00",
+                        "secondary-fixed-dim": "#dfc391",
+                        "primary": "#f2ca50",
+                        "tertiary-fixed-dim": "#c7c6c4",
+                        "on-primary-fixed-variant": "#574500",
+                        "on-surface-variant": "#d0c5af",
+                        "background": "#131313",
+                        "on-background": "#e5e2e1",
+                        "on-secondary-fixed": "#261900",
+                        "primary-fixed": "#ffe088",
+                        "error-container": "#93000a",
+                        "surface-variant": "#353534",
+                        "surface-container-highest": "#353534",
+                        "surface-container-high": "#2a2a2a",
+                        "on-tertiary-container": "#444544",
+                        "surface-tint": "#e9c349",
+                        "primary-container": "#d4af37",
+                        "primary-fixed-dim": "#e9c349",
+                        "inverse-on-surface": "#313030",
+                        "on-surface": "#e5e2e1",
+                        "secondary-fixed": "#fcdfab",
+                        "surface-dim": "#131313",
+                        "secondary": "#dfc391",
+                        "surface-container-lowest": "#0e0e0e",
+                        "outline": "#99907c",
+                        "on-tertiary-fixed-variant": "#464746"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "fontFamily": {
+                        "headline": ["Noto Serif", "serif"],
+                        "body": ["Inter", "sans-serif"],
+                        "label": ["Inter", "sans-serif"],
+                        "serif": ["Cormorant Garamond", "serif"]
+                    }
+                },
+            }
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .glass-panel {
+            background: rgba(23, 23, 23, 0.6);
+            backdrop-filter: blur(24px);
+            -webkit-backdrop-filter: blur(24px);
+        }
+        .gold-bloom {
+            background: radial-gradient(circle at center, rgba(242, 202, 80, 0.08) 0%, transparent 70%);
+        }
+        .gold-bottom-glow {
+            box-shadow: 0 4px 20px -10px rgba(242, 202, 80, 0.5);
+        }
+        input:focus {
+            outline: none !important;
+            box-shadow: none !important;
+        }
+    </style>
+</head>
+<body class="bg-background text-on-surface font-body selection:bg-primary selection:text-on-primary">
+<!-- Top Navigation Bar -->
+<nav class="fixed top-0 w-full z-50 bg-neutral-900/60 backdrop-blur-xl flex justify-between items-center px-8 h-20 max-w-full mx-auto shadow-2xl shadow-black/50">
+<div class="text-2xl font-bold tracking-tighter text-[#f2ca50] font-noto-serif">NOCTURNE</div>
+<div class="hidden md:flex items-center gap-8">
+<a class="font-noto-serif text-sm tracking-tight text-[#d0c5af] hover:text-[#f2ca50] transition-colors" href="#">Discovery</a>
+<a class="font-noto-serif text-sm tracking-tight text-[#d0c5af] hover:text-[#f2ca50] transition-colors" href="#">Vibe Search</a>
+<a class="font-noto-serif text-sm tracking-tight text-[#f2ca50] border-b border-[#d4af37] pb-1 font-semibold" href="#">Profile</a>
+</div>
+<div class="flex items-center gap-6">
+<button class="text-[#d0c5af] hover:text-[#f2ca50] transition-all duration-300">
+<span class="material-symbols-outlined">notifications</span>
+</button>
+<button class="text-[#d0c5af] hover:text-[#f2ca50] transition-all duration-300">
+<span class="material-symbols-outlined">favorite</span>
+</button>
+<div class="w-10 h-10 rounded-full overflow-hidden border border-outline-variant/30">
+<img alt="VIP User Profile" data-alt="close-up portrait of a sophisticated man with a stylish beard against a dark studio background with warm rim lighting" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDZ9PaC9A7-N0lC3i1ICqi9XxilFqBFHsAEUzJsBNDtnrNIjtrKizSmA7LT5SD0coBLduJk9WJeUkczU2MspdQV7unlvcYCzycI3h4YT8XQm4wDus0z9lXLV-iUJ2xiwOWtpnK3hj5t_pGTpvvm5d1YYYlS06Vktbl7fjxCCA_n_G7zTf_XxwjhJn6igMlmmF-__TJmzP7M4YpB0wh4UDBXmONLMph4NNxz1ofLWhsgbpSgs1giOgtZIxVHgoSbVBqn-NZLkSR7Zys"/>
+</div>
+</div>
+</nav>
+<!-- Main Content Area with Gold Bloom Background -->
+<main class="min-h-screen pt-32 pb-24 px-4 relative overflow-hidden">
+<!-- Background Bloom Effects -->
+<div class="absolute top-1/4 -left-1/4 w-[600px] h-[600px] gold-bloom opacity-50"></div>
+<div class="absolute bottom-1/4 -right-1/4 w-[600px] h-[600px] gold-bloom opacity-30"></div>
+<div class="max-w-[600px] mx-auto relative z-10">
+<!-- Artist Teaser Header -->
+<div class="text-center mb-10">
+<span class="font-label text-xs tracking-[0.2em] text-primary uppercase mb-4 block">Festival Energy Flow</span>
+<h1 class="font-serif text-4xl text-on-surface mb-2">Book Your Headliner</h1>
+<p class="text-on-surface-variant font-light">Secure the atmosphere for your next curated event.</p>
+</div>
+<!-- Booking Column -->
+<div class="glass-panel rounded-3xl p-8 md:p-12 shadow-2xl border border-white/5">
+<form class="space-y-10">
+<!-- Form Section: Details -->
+<div class="space-y-6">
+<div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+<!-- Venue Input -->
+<div class="space-y-2 group">
+<label class="block text-[10px] uppercase tracking-widest text-on-surface-variant ml-1">Venue</label>
+<div class="bg-surface-container-lowest/50 border-b border-outline-variant/40 group-focus-within:border-primary transition-all p-4">
+<input class="bg-transparent w-full border-none p-0 text-on-surface placeholder:text-outline/50" placeholder="The Glass House" type="text"/>
+</div>
+</div>
+<!-- Date Input -->
+<div class="space-y-2 group">
+<label class="block text-[10px] uppercase tracking-widest text-on-surface-variant ml-1">Date</label>
+<div class="bg-surface-container-lowest/50 border-b border-outline-variant/40 group-focus-within:border-primary transition-all p-4">
+<input class="bg-transparent w-full border-none p-0 text-on-surface color-scheme-dark" type="date"/>
+</div>
+</div>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+<!-- Time Input -->
+<div class="space-y-2 group">
+<label class="block text-[10px] uppercase tracking-widest text-on-surface-variant ml-1">Start Time</label>
+<div class="bg-surface-container-lowest/50 border-b border-outline-variant/40 group-focus-within:border-primary transition-all p-4">
+<input class="bg-transparent w-full border-none p-0 text-on-surface color-scheme-dark" type="time"/>
+</div>
+</div>
+<!-- Set Length -->
+<div class="space-y-2 group">
+<label class="block text-[10px] uppercase tracking-widest text-on-surface-variant ml-1">Set Length</label>
+<div class="bg-surface-container-lowest/50 border-b border-outline-variant/40 group-focus-within:border-primary transition-all p-4">
+<select class="bg-transparent w-full border-none p-0 text-on-surface appearance-none">
+<option class="bg-surface-container">90 Minutes</option>
+<option class="bg-surface-container">2 Hours</option>
+<option class="bg-surface-container">3 Hours (Extended)</option>
+</select>
+</div>
+</div>
+</div>
+</div>
+<!-- Large Monetary Offer -->
+<div class="text-center py-6">
+<label class="block text-[11px] uppercase tracking-[0.3em] text-primary mb-2">Professional Offer</label>
+<div class="relative inline-flex items-baseline group">
+<span class="font-serif text-3xl text-primary opacity-60 mr-2">$</span>
+<input class="font-serif text-6xl md:text-7xl bg-transparent border-b-2 border-primary border-dashed group-focus-within:border-solid w-48 text-center text-on-surface p-0 gold-bottom-glow" placeholder="0,000" type="text" value="2,500"/>
+</div>
+<p class="mt-4 text-[11px] text-on-surface-variant uppercase tracking-widest italic">All-inclusive performance fee</p>
+</div>
+<!-- Professional Verification -->
+<div class="bg-white/5 rounded-xl p-4 flex items-center gap-4">
+<span class="material-symbols-outlined text-primary" style="font-variation-settings: 'FILL' 1;">verified_user</span>
+<p class="text-xs text-on-surface-variant leading-relaxed">
+                            Your payment is held in escrow and released only after the performance. Secure, encrypted transaction guaranteed by NOCTURNE.
+                        </p>
+</div>
+<!-- Full Width CTA -->
+<button class="w-full py-6 rounded-lg bg-gradient-to-r from-primary to-primary-container text-on-primary font-bold tracking-[0.2em] text-sm hover:scale-[1.01] active:scale-[0.98] transition-all duration-300 shadow-xl shadow-primary/10">
+                        SEND OFFER
+                    </button>
+<div class="text-center">
+<a class="text-xs text-on-surface-variant hover:text-primary transition-colors underline underline-offset-4 decoration-outline-variant" href="#">Review Terms of Engagement</a>
+</div>
+</form>
+</div>
+<!-- Contextual Artist Preview (Subtle Asymmetry) -->
+<div class="mt-12 flex items-center justify-between opacity-80 px-4">
+<div class="flex items-center gap-4">
+<div class="w-16 h-16 rounded-full grayscale hover:grayscale-0 transition-all duration-500 overflow-hidden">
+<img alt="Artist" data-alt="dramatic wide shot of a electronic music artist performing at night in front of a giant minimalist circular LED installation" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDwFfxUml-45T0WRIf-2ZZw35bGcCwbWkUz3Yh3UWdziD288LKmf77f8twh0e1dhcWuP1inMwFfp76zx6JzbE_vUdO1YtJL_-3aWpNE2deLGo3GFeJ7ugCzwhzI7KbKR-dq48zw0LtNzL0nO0251SBgwAxltlNmxUnohC563pVKrhaigNl_9Er33fZvn1a2JtUcZis8A2nLdz3Dm2AnTWbDzSyKloGc1px6SR_F3T2CLcryeKmJ_9cu-2IPCpGoYG4jaQ3Ythhmcf4"/>
+</div>
+<div>
+<p class="font-serif text-xl">Lumina Pulse</p>
+<p class="text-xs text-on-surface-variant uppercase tracking-widest">Electronic / Melodic Techno</p>
+</div>
+</div>
+<div class="text-right">
+<p class="text-xs text-on-surface-variant">Response Time</p>
+<p class="font-semibold text-primary">~ 2 Hours</p>
+</div>
+</div>
+</div>
+</main>
+<!-- Footer -->
+<footer class="bg-[#0e0e0e] w-full py-12 px-8 flex flex-col md:flex-row justify-between items-center gap-6 border-t border-[#4d4635]/20">
+<div class="text-lg font-serif text-[#f2ca50]">NOCTURNE</div>
+<div class="flex flex-wrap justify-center gap-8">
+<a class="font-inter text-xs tracking-widest uppercase text-[#d0c5af] hover:text-[#f2ca50] transition-all opacity-80 hover:opacity-100" href="#">Instagram</a>
+<a class="font-inter text-xs tracking-widest uppercase text-[#d0c5af] hover:text-[#f2ca50] transition-all opacity-80 hover:opacity-100" href="#">Mixcloud</a>
+<a class="font-inter text-xs tracking-widest uppercase text-[#d0c5af] hover:text-[#f2ca50] transition-all opacity-80 hover:opacity-100" href="#">Privacy Policy</a>
+<a class="font-inter text-xs tracking-widest uppercase text-[#d0c5af] hover:text-[#f2ca50] transition-all opacity-80 hover:opacity-100" href="#">Terms of Service</a>
+</div>
+<div class="font-inter text-xs tracking-widest uppercase text-[#d0c5af] opacity-60">
+            © 2024 NOCTURNE. Curated with Passion.
+        </div>
+</footer>
+<script>
+const API = '';
+const djId = new URLSearchParams(location.search).get('dj') || 'lumina-pulse';
+
+// Fix nav links
+document.querySelectorAll('nav a').forEach(a => {
+  const t = a.textContent.trim();
+  if (t === 'Discovery') a.href = '/discovery.html';
+  else if (t === 'Vibe Search') a.href = '/search.html';
+  else if (t === 'Profile') a.href = '/vibe-search.html';
+});
+
+// Load DJ info for the artist preview
+fetch(`${API}/api/djs/${djId}`)
+  .then(r => r.json())
+  .then(dj => {
+    // Update artist preview at bottom
+    const nameEl = document.querySelector('.font-serif.text-xl');
+    if (nameEl) nameEl.textContent = dj.name;
+
+    const taglineEl = nameEl?.parentElement?.querySelector('.text-xs');
+    if (taglineEl) taglineEl.textContent = dj.tagline || dj.genres?.join(' / ') || '';
+
+    const previewImg = document.querySelector('.w-16.h-16 img');
+    if (previewImg && dj.image_url) previewImg.src = dj.image_url;
+
+    // Set default fee
+    const feeInput = document.querySelector('.font-serif.text-6xl, .font-serif.text-7xl');
+    if (feeInput && dj.fee_from) feeInput.value = dj.fee_from.toLocaleString();
+
+    // Update page title
+    const h1 = document.querySelector('h1');
+    if (h1) h1.textContent = `Book ${dj.name}`;
+  })
+  .catch(() => {});
+
+// Handle form submission
+const form = document.querySelector('form');
+const submitBtn = document.querySelector('button.w-full');
+
+if (submitBtn) {
+  submitBtn.addEventListener('click', async (e) => {
+    e.preventDefault();
+
+    const venueInput = document.querySelector('input[placeholder="The Glass House"]');
+    const dateInput = document.querySelector('input[type="date"]');
+    const timeInput = document.querySelector('input[type="time"]');
+    const setSelect = document.querySelector('select');
+    const feeInput = document.querySelector('.font-serif.text-6xl, .font-serif.text-7xl');
+
+    const body = {
+      dj_id: djId,
+      venue_name: venueInput?.value || 'Unknown Venue',
+      date: dateInput?.value || new Date().toISOString().split('T')[0],
+      start_time: timeInput?.value || '22:00',
+      set_length: setSelect?.value || '2 Hours',
+      offered_fee: parseInt((feeInput?.value || '0').replace(/,/g, ''))
+    };
+
+    submitBtn.textContent = 'SENDING...';
+    submitBtn.disabled = true;
+
+    try {
+      const res = await fetch(`${API}/api/bookings`, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify(body)
+      });
+
+      if (res.ok) {
+        submitBtn.textContent = 'OFFER SENT';
+        submitBtn.classList.remove('from-primary', 'to-primary-container');
+        submitBtn.classList.add('bg-green-700');
+      } else {
+        const err = await res.json();
+        submitBtn.textContent = 'ERROR - TRY AGAIN';
+        submitBtn.disabled = false;
+      }
+    } catch {
+      submitBtn.textContent = 'NETWORK ERROR';
+      submitBtn.disabled = false;
+    }
+  });
+}
+</script>
+</body></html>

@@ -1,0 +1,350 @@
+<!-- DJ Profile -->
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@600;700&amp;family=Inter:wght@400;500;600;700&amp;family=Noto+Serif:wght@400;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "surface-container": "#201f1f",
+                    "outline-variant": "#4d4635",
+                    "surface-container-low": "#1c1b1b",
+                    "tertiary": "#cfcecc",
+                    "inverse-primary": "#735c00",
+                    "on-secondary-fixed-variant": "#57441d",
+                    "on-secondary": "#3e2e08",
+                    "on-tertiary-fixed": "#1b1c1b",
+                    "surface-bright": "#3a3939",
+                    "inverse-surface": "#e5e2e1",
+                    "on-error": "#690005",
+                    "on-primary-container": "#554300",
+                    "error": "#ffb4ab",
+                    "on-primary-fixed": "#241a00",
+                    "on-secondary-container": "#ccb281",
+                    "tertiary-fixed": "#e3e2e0",
+                    "surface": "#131313",
+                    "on-tertiary": "#303130",
+                    "on-error-container": "#ffdad6",
+                    "tertiary-container": "#b3b3b1",
+                    "on-primary": "#3c2f00",
+                    "secondary-fixed-dim": "#dfc391",
+                    "primary": "#f2ca50",
+                    "tertiary-fixed-dim": "#c7c6c4",
+                    "on-primary-fixed-variant": "#574500",
+                    "on-surface-variant": "#d0c5af",
+                    "background": "#131313",
+                    "on-background": "#e5e2e1",
+                    "on-secondary-fixed": "#261900",
+                    "primary-fixed": "#ffe088",
+                    "error-container": "#93000a",
+                    "surface-variant": "#353534",
+                    "surface-container-highest": "#353534",
+                    "surface-container-high": "#2a2a2a",
+                    "on-tertiary-container": "#444544",
+                    "surface-tint": "#e9c349",
+                    "primary-container": "#d4af37",
+                    "primary-fixed-dim": "#e9c349",
+                    "inverse-on-surface": "#313030",
+                    "on-surface": "#e5e2e1",
+                    "secondary-fixed": "#fcdfab",
+                    "surface-dim": "#131313",
+                    "secondary": "#dfc391",
+                    "surface-container-lowest": "#0e0e0e",
+                    "secondary-container": "#57441d",
+                    "outline": "#99907c",
+                    "on-tertiary-fixed-variant": "#464746"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.25rem",
+                    "lg": "0.5rem",
+                    "xl": "0.75rem",
+                    "full": "9999px"
+            },
+            "fontFamily": {
+                    "headline": ["Noto Serif"],
+                    "serif-display": ["Cormorant Garamond"],
+                    "body": ["Inter"],
+                    "label": ["Inter"]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .editorial-grid {
+            display: grid;
+            grid-template-columns: repeat(12, 1fr);
+            gap: 1.5rem;
+        }
+        .glass-card {
+            background: rgba(23, 23, 23, 0.6);
+            backdrop-filter: blur(16px);
+        }
+        .bw-to-color {
+            filter: grayscale(100%);
+            transition: filter 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .bw-to-color:hover {
+            filter: grayscale(0%);
+        }
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+    </style>
+</head>
+<body class="bg-background text-on-surface font-body selection:bg-primary-container selection:text-on-primary-container">
+<!-- TopNavBar -->
+<header class="fixed top-0 w-full z-50 bg-neutral-900/60 backdrop-blur-xl shadow-2xl shadow-black/50 h-20">
+<nav class="flex justify-between items-center px-8 h-full max-w-full mx-auto">
+<div class="text-2xl font-bold tracking-tighter text-[#f2ca50] font-noto-serif">
+                NOCTURNE
+            </div>
+<div class="hidden md:flex items-center gap-8 font-noto-serif text-sm tracking-tight">
+<a class="text-[#f2ca50] border-b border-[#d4af37] pb-1 font-semibold" href="#">Discovery</a>
+<a class="text-[#d0c5af] hover:text-[#f2ca50] transition-colors" href="#">Vibe Search</a>
+<a class="text-[#d0c5af] hover:text-[#f2ca50] transition-colors" href="#">Profile</a>
+</div>
+<div class="flex items-center gap-6">
+<button class="text-[#d0c5af] hover:text-[#f2ca50] transition-all duration-300 scale-95 active:duration-150">
+<span class="material-symbols-outlined" data-icon="notifications">notifications</span>
+</button>
+<button class="text-[#d0c5af] hover:text-[#f2ca50] transition-all duration-300 scale-95 active:duration-150">
+<span class="material-symbols-outlined" data-icon="favorite">favorite</span>
+</button>
+<div class="w-10 h-10 rounded-full overflow-hidden border border-outline-variant/30">
+<img alt="VIP User Profile" data-alt="Portrait of a sophisticated man in luxury evening wear with soft atmospheric club lighting in background" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAyAlZzD8NM3kOXSLgV5YfDiW9YmjWSzys2Zh0ZK9vmAcmliAbMd9jPFDHYB0lvFEEvAD4z19zOrtYgU6b6ZnY1kq_Y4OLxlUUpXwVChTQe1ZqLYYdSs9Je1ZZgy1Gazy679Gzo8u3FGAORo8Ra_w7LgQU3BBE44e_TN5g9rnEE1NuiFaQivq6eGyUJ3MmZE8eePJRYSzA_LAsafwqYk1_4y2ljS7-tqL5qv7YCTiobqx6hCnT7xUnpnXvHHFc7CORPlGFZEOT_3hI"/>
+</div>
+</div>
+</nav>
+</header>
+<main class="pt-20">
+<!-- Hero Section -->
+<section class="px-8 py-24 md:py-32 flex flex-col items-center text-center">
+<h1 class="font-serif-display text-5xl md:text-[72px] leading-[1.1] tracking-tight max-w-6xl text-on-surface">
+                ELEVATE YOUR ATMOSPHERE • <span class="text-primary italic">CURATED TALENT</span> • IMMERSIVE SOUND
+            </h1>
+<p class="mt-8 font-body text-on-surface-variant max-w-2xl text-lg tracking-wide uppercase">
+                The global standard for premium festival curation and underground talent scouting.
+            </p>
+</section>
+<!-- Main Layout: Editorial Grid + Live Radar -->
+<div class="px-8 mb-24 flex flex-col xl:flex-row gap-12">
+<!-- Content Canvas (Editorial Masonry Grid) -->
+<div class="flex-1">
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+<!-- DJ Card 1: Large Featured -->
+<div class="md:col-span-2 group relative overflow-hidden bg-surface-container-highest rounded-xl aspect-[16/9]">
+<img alt="DJ performing" class="bw-to-color absolute inset-0 w-full h-full object-cover" data-alt="Cinematic shot of a DJ performing at a high-end festival with dramatic stage lighting and hazy atmospheric gold light" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAF2SegbBrIoE668MsEhgP7RODYhXx7fUehCaMfQI_ULvVn8MktyKlUp4txpJ9espNr5rhlg_NEd5kn3efCL21z_tQDZ-SQPxkzu8k6fiK1cijX67Ne9FcY_44pAjpxhvfLF_aGirjNLL41mlk3-4rweXkA_78HtIESUJezu_irQ76JguApXUhHu0kp0TorNVN_GJflPqwP5SD2F2LASjummJuTw-Fy7sFsV6vztrY2a37LUwAJOU6qSRuUm9dW9UzhBjoat9ILtFU"/>
+<div class="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent"></div>
+<div class="absolute bottom-0 left-0 p-8">
+<span class="inline-block px-3 py-1 mb-4 text-[10px] tracking-widest uppercase bg-primary text-on-primary font-bold">Featured Artist</span>
+<h3 class="font-serif-display text-4xl text-on-surface">AMARA VOSS</h3>
+<p class="text-primary-fixed-dim font-medium tracking-wide">Melodic Techno / Berlin</p>
+</div>
+</div>
+<!-- Live Radar (Mobile Version Shown Above Grid) -->
+<aside class="xl:hidden glass-card p-8 rounded-xl border border-outline-variant/10">
+<div class="flex items-center gap-2 mb-6 text-primary">
+<span class="material-symbols-outlined text-sm" data-icon="sensors">sensors</span>
+<h2 class="font-label text-xs tracking-[0.2em] uppercase font-bold">Live Radar</h2>
+</div>
+<div class="space-y-6">
+<div class="flex flex-col gap-1 border-l-2 border-primary/30 pl-4 py-1">
+<span class="text-[10px] text-on-surface-variant font-medium">JUST NOW</span>
+<p class="text-sm text-on-surface"><span class="font-bold text-primary">Fabric London</span> booked <span class="font-bold">DJ SPINN</span></p>
+</div>
+<div class="flex flex-col gap-1 border-l-2 border-outline-variant/30 pl-4 py-1">
+<span class="text-[10px] text-on-surface-variant font-medium">4 MINS AGO</span>
+<p class="text-sm text-on-surface"><span class="font-bold text-primary">Printworks</span> confirmed <span class="font-bold">SAMA'</span></p>
+</div>
+</div>
+</aside>
+<!-- DJ Card 2 -->
+<div class="group relative overflow-hidden bg-surface-container-highest rounded-xl aspect-[3/4]">
+<img alt="Techno artist" class="bw-to-color absolute inset-0 w-full h-full object-cover" data-alt="Intense black and white portrait of a female techno DJ with structural fashion and industrial background" src="https://lh3.googleusercontent.com/aida-public/AB6AXuA1tdJm3Nn3Gv_pBO8i7sRmEK_8K3AyJ-6Z26WUqlWBxaer4_KpYMn6-BrOU05Apbt5JDvtAjaOyGbOem1aaH6O63YVb5s2bKqPvf6HnmuvlQgntXuyiJIH9HGpSz3wpuYLsAWagGPKotedw4xxHyRUoVgbvRuC1a22Ibb7kE3n21jynikuCnD1M21HTaCjNV9kq_sWQEyj5dFV1MwN6nTFMKjJIcouiHBMb5tDgP_GCwCrAK6Y3It-ky5TA8XUcHV7_5F66gWnCAM"/>
+<div class="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent"></div>
+<div class="absolute bottom-0 left-0 p-6">
+<h3 class="font-serif-display text-2xl text-on-surface">KALEIDOS</h3>
+<div class="flex gap-2 mt-2">
+<span class="text-[10px] tracking-widest text-on-surface-variant uppercase">Minimal</span>
+<span class="text-[10px] tracking-widest text-on-surface-variant uppercase">Dub</span>
+</div>
+</div>
+</div>
+<!-- Cinematic Venue Promo -->
+<div class="md:col-span-1 lg:col-span-2 group relative overflow-hidden bg-surface-container-lowest rounded-xl aspect-[16/9]">
+<img alt="Luxury Club Visuals" class="absolute inset-0 w-full h-full object-cover opacity-60 group-hover:scale-105 transition-transform duration-700" data-alt="Cinematic wide shot of a luxury underground club with architectural lighting, golden particles, and sophisticated crowd in silhouette" src="https://lh3.googleusercontent.com/aida-public/AB6AXuChMjl1ayDdwtPUhn-SSxf6UtA2GHBVA6hMpnZiBUZ-IzB1IUb_3eR-e5_wry1mawVXt2GOkXeJiR5ZFsvaKsLGDLujLXRo4CNYlp6r6q8VZJKcMpfPXzrm4fBDWEYcglnURh4m6EKN_Yh5-YptmWvrx-KETeIHuTVCCS5jFNPf5K10Jl8ruE8KFpwz4fOvlUTpo4tJHcvrHaGi5o8o9sWU6UyNHW65Qu2ZxJC_RRYTz73oy2N26uO6ZARvSkeUeUtAQWAAH3opRH8"/>
+<div class="absolute inset-0 flex flex-col items-center justify-center text-center p-8 bg-black/40">
+<span class="text-primary material-symbols-outlined text-5xl mb-4" data-icon="play_circle">play_circle</span>
+<h2 class="font-serif-display text-3xl text-primary mb-2">THE ARCHIVE • IBIZA</h2>
+<p class="text-sm tracking-[0.2em] uppercase font-light text-on-surface">Experience Immersion</p>
+</div>
+</div>
+<!-- DJ Card 3 -->
+<div class="group relative overflow-hidden bg-surface-container-highest rounded-xl aspect-[3/4]">
+<img alt="Artist" class="bw-to-color absolute inset-0 w-full h-full object-cover" data-alt="Artistic profile of a male musician in a dimly lit studio with subtle gold reflections on metallic hardware" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDHXJiNUjdi6NXS8scELN_SeYYrJb6O1fRYOlzKodPLz1fGj0qAS6Ebn8YwPfOwbQbA5Os7wRDLoCPoyVfm9ygK2auy22aL8JlJOiVlLj-yN3MLN-Lxtdw6jgWIX0uz53GhXRhhLu4eeWIzql_SQdLm0f1F4D-fL-rl8Ag6Qxe4lGqgFTpYql_vhCcQJPTogxjfkUPB4ddr9Q1Gh14i91_1ZLQBvbNsMBw2uWJ6OXS4trnqCvBxuOHfp7gdZGPKvy96Snb2xZYk6j8"/>
+<div class="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent"></div>
+<div class="absolute bottom-0 left-0 p-6">
+<h3 class="font-serif-display text-2xl text-on-surface">SYNESTHESIA</h3>
+<div class="flex gap-2 mt-2">
+<span class="text-[10px] tracking-widest text-on-surface-variant uppercase">House</span>
+<span class="text-[10px] tracking-widest text-on-surface-variant uppercase">Groove</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Desktop Live Radar Sidebar -->
+<aside class="hidden xl:block w-80 shrink-0">
+<div class="sticky top-28 space-y-12">
+<!-- Section Header -->
+<div>
+<div class="flex items-center gap-2 mb-6 text-primary">
+<span class="material-symbols-outlined text-sm" data-icon="sensors">sensors</span>
+<h2 class="font-label text-xs tracking-[0.3em] uppercase font-bold">Live Radar</h2>
+</div>
+<div class="space-y-8">
+<!-- Booking Item 1 -->
+<div class="relative pl-6 before:absolute before:left-0 before:top-0 before:bottom-0 before:w-[1px] before:bg-outline-variant/30 group">
+<div class="absolute left-[-4px] top-0 w-2 h-2 rounded-full bg-primary shadow-[0_0_8px_rgba(242,202,80,0.8)]"></div>
+<span class="text-[10px] tracking-widest text-on-surface-variant font-bold uppercase mb-1 block">Live Update</span>
+<p class="text-sm leading-relaxed text-on-surface">
+<span class="text-primary font-bold">Fabric London</span> just booked <span class="font-serif text-lg italic">DJ SPINN</span> for the Nocturne Takeover.
+                                </p>
+</div>
+<!-- Booking Item 2 -->
+<div class="relative pl-6 before:absolute before:left-0 before:top-0 before:bottom-0 before:w-[1px] before:bg-outline-variant/30">
+<span class="text-[10px] tracking-widest text-on-surface-variant font-bold uppercase mb-1 block">12 Mins Ago</span>
+<p class="text-sm leading-relaxed text-on-surface">
+<span class="text-primary font-bold">Amnesia Ibiza</span> confirmed a 6-hour set with <span class="font-serif text-lg italic">AMARA VOSS</span>.
+                                </p>
+</div>
+<!-- Booking Item 3 -->
+<div class="relative pl-6 before:absolute before:left-0 before:top-0 before:bottom-0 before:w-[1px] before:bg-outline-variant/30">
+<span class="text-[10px] tracking-widest text-on-surface-variant font-bold uppercase mb-1 block">1 Hour Ago</span>
+<p class="text-sm leading-relaxed text-on-surface">
+<span class="text-primary font-bold">Printworks</span> released the lineup for <span class="italic">The Obsidian Gala</span>.
+                                </p>
+</div>
+</div>
+</div>
+<!-- Newsletter Inset -->
+<div class="p-6 bg-surface-container-lowest border border-outline-variant/20 rounded-lg">
+<h4 class="font-serif-display text-xl mb-4 text-primary">Insider Access</h4>
+<p class="text-xs text-on-surface-variant mb-4 leading-relaxed">Join 12,000+ industry professionals for curated talent alerts.</p>
+<div class="relative">
+<input class="w-full bg-surface-container-high border-none text-xs p-3 focus:ring-1 focus:ring-primary" placeholder="Email Address" type="text"/>
+<button class="absolute right-2 top-1/2 -translate-y-1/2 text-primary material-symbols-outlined" data-icon="arrow_right_alt">arrow_right_alt</button>
+</div>
+</div>
+</div>
+</aside>
+</div>
+<!-- Venue Promos (Full Width Secondary Grid) -->
+<section class="bg-surface-container-lowest py-24 px-8 overflow-hidden">
+<div class="flex justify-between items-end mb-12">
+<div>
+<h2 class="font-serif-display text-4xl mb-2 text-on-surface">ICONIC DESTINATIONS</h2>
+<p class="font-label text-xs tracking-[0.2em] text-on-surface-variant uppercase">Where Sound Meets Architecture</p>
+</div>
+<button class="hidden md:block text-primary text-sm font-bold tracking-widest uppercase border-b border-primary/30 pb-1">View All Venues</button>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-4 gap-4 h-[500px]">
+<div class="group relative overflow-hidden rounded-lg md:col-span-2">
+<img alt="Club Atmosphere" class="absolute inset-0 w-full h-full object-cover group-hover:scale-110 transition-transform duration-1000" data-alt="Dynamic shot of a massive warehouse rave with laser beams cutting through thick blue and purple smoke" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDo7S4SzT5cYMLvzMqRQasmD5UCVOy6OSOimxeNYM0ln662P45jC-RLq22rMyFAaCss0vwQc8UYaypkiGKXB4OPbK0MtLHRcX1mCVf6YM_yHJJncJXTlikydZSLUgcSGKuz_z1MZyuVUCj_rQXOM5uymLqRPjfv2pqICri1RokBJeTNuZeV1DuFmtXpkx7H_KlfjzqmNJxYQREsFwsQOMqV9pOksjzo_oCN0rmdTB_zFELCSKOwj8Le257wkNEucnTmmJpcyRvfOUk"/>
+<div class="absolute inset-0 bg-black/30 group-hover:bg-black/10 transition-colors"></div>
+<div class="absolute top-6 left-6 text-on-surface font-serif-display text-2xl">BERGHAIN • BERLIN</div>
+</div>
+<div class="group relative overflow-hidden rounded-lg">
+<img alt="Intimate Venue" class="absolute inset-0 w-full h-full object-cover group-hover:scale-110 transition-transform duration-1000" data-alt="Warmly lit underground jazz and electronic club with plush velvet seating and vintage audio equipment" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAp6dU4NFVvDCFemgdtB43lY3QM3kTLIZCDwmUlJ4IL40BDWjLSt6xeKwqPwZzhnQU0VCw0A6cdE-ifFNKM4cbpV_QSlM-o8GPlyYZvNWf1iWG54LpqB_0esFB8CbP22Z1J4seY_OCVSlcAoXlnU9jqMMZitppmb2cQR6EmIgzy8mnTmy2dcyZT_j31zpodJl1Ma4Rh9Wm_9wmwjMAdQ7PmxKdweu_ktHNYPEDcJqKGcI_TgixhMajeWMMIqk6t_QMWKSby1lZgk90"/>
+<div class="absolute inset-0 bg-black/30 group-hover:bg-black/10 transition-colors"></div>
+<div class="absolute top-6 left-6 text-on-surface font-serif-display text-2xl">THE NEST</div>
+</div>
+<div class="group relative overflow-hidden rounded-lg">
+<img alt="Industrial Space" class="absolute inset-0 w-full h-full object-cover group-hover:scale-110 transition-transform duration-1000" data-alt="Minimalist industrial event space with raw concrete walls and large floor-to-ceiling windows overlooking a city skyline at dusk" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBGasg60UfKZj9hZkwCsQgoyORMTptYwxmq1msCwcMPl92Zg1vNeJ2jtnzaYCFCVegxgYhDeJnr-kvRys_1qkc0b90WaOPz8Kjeso6SnTJip7X1BT0GpPmSSaxu-rwCApzkFRpU_ZmKmDKygxenkWia6B1ROVgXVXqDDlSkiD44FkOhx8yGCNF4FXknxjKNPObxGr_geI9wNEXvwsR3ipT6xsdu0zClehX7RG99zlZqrEtE1GICtV3sXiXjY1PIS_0hDI_THo671cI"/>
+<div class="absolute inset-0 bg-black/30 group-hover:bg-black/10 transition-colors"></div>
+<div class="absolute top-6 left-6 text-on-surface font-serif-display text-2xl">BASEMENT</div>
+</div>
+</div>
+</section>
+</main>
+<!-- Footer -->
+<footer class="bg-[#0e0e0e] w-full py-12 px-8 border-t border-[#4d4635]/20">
+<div class="flex flex-col md:flex-row justify-between items-center gap-6 max-w-full mx-auto">
+<div class="text-lg font-serif text-[#f2ca50]">
+                NOCTURNE
+            </div>
+<div class="flex flex-wrap justify-center gap-8 font-inter text-xs tracking-widest uppercase text-[#d0c5af]">
+<a class="hover:text-[#f2ca50] transition-all opacity-80 hover:opacity-100" href="#">Instagram</a>
+<a class="hover:text-[#f2ca50] transition-all opacity-80 hover:opacity-100" href="#">Mixcloud</a>
+<a class="hover:text-[#f2ca50] transition-all opacity-80 hover:opacity-100" href="#">Privacy Policy</a>
+<a class="hover:text-[#f2ca50] transition-all opacity-80 hover:opacity-100" href="#">Terms of Service</a>
+</div>
+<div class="font-inter text-xs tracking-widest uppercase text-[#d0c5af] opacity-80">
+                © 2024 NOCTURNE. Curated with Passion.
+            </div>
+</div>
+</footer>
+<script>
+const API = '';
+
+// Fix navigation links
+document.querySelectorAll('nav a').forEach(a => {
+  const text = a.textContent.trim();
+  if (text === 'Discovery') a.href = '/discovery.html';
+  else if (text === 'Vibe Search') a.href = '/search.html';
+  else if (text === 'Profile') a.href = '/vibe-search.html';
+});
+
+// Populate Live Radar
+fetch(`${API}/api/radar`)
+  .then(r => r.json())
+  .then(events => {
+    // Desktop radar
+    const desktopRadar = document.querySelector('aside.hidden.xl\\:block .space-y-8');
+    if (desktopRadar && events.length) {
+      desktopRadar.innerHTML = events.map((e, i) => `
+        <div class="relative pl-6 before:absolute before:left-0 before:top-0 before:bottom-0 before:w-[1px] before:bg-outline-variant/30 ${i === 0 ? 'group' : ''}">
+          ${i === 0 ? '<div class="absolute left-[-4px] top-0 w-2 h-2 rounded-full bg-primary shadow-[0_0_8px_rgba(242,202,80,0.8)]"></div>' : ''}
+          <span class="text-[10px] tracking-widest text-on-surface-variant font-bold uppercase mb-1 block">${e.time_ago.toUpperCase()}</span>
+          <p class="text-sm leading-relaxed text-on-surface">
+            <span class="text-primary font-bold">${e.venue_name}</span> ${e.action} <span class="font-serif text-lg italic">${e.dj_name}</span>.
+          </p>
+        </div>
+      `).join('');
+    }
+    // Mobile radar
+    const mobileRadar = document.querySelector('aside.xl\\:hidden .space-y-6');
+    if (mobileRadar && events.length) {
+      mobileRadar.innerHTML = events.slice(0, 2).map((e, i) => `
+        <div class="flex flex-col gap-1 border-l-2 ${i === 0 ? 'border-primary/30' : 'border-outline-variant/30'} pl-4 py-1">
+          <span class="text-[10px] text-on-surface-variant font-medium">${e.time_ago.toUpperCase()}</span>
+          <p class="text-sm text-on-surface"><span class="font-bold text-primary">${e.venue_name}</span> ${e.action} <span class="font-bold">${e.dj_name}</span></p>
+        </div>
+      `).join('');
+    }
+  });
+
+// Make DJ cards clickable
+document.querySelectorAll('.font-serif-display').forEach(el => {
+  const card = el.closest('.group');
+  if (card && card.querySelector('img[alt*="DJ"], img[alt*="Artist"], img[alt*="artist"], img[alt*="Techno"]')) {
+    const name = el.textContent.trim();
+    const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+    card.style.cursor = 'pointer';
+    card.addEventListener('click', () => window.location.href = `/vibe-search.html?dj=${slug}`);
+  }
+});
+</script>
+</body></html>

@@ -1,0 +1,341 @@
+<!-- Vibe Search -->
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif:wght@400;700;800&amp;family=Inter:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "surface-container": "#201f1f",
+                    "outline-variant": "#4d4635",
+                    "surface-container-low": "#1c1b1b",
+                    "tertiary": "#cfcecc",
+                    "inverse-primary": "#735c00",
+                    "on-secondary-fixed-variant": "#57441d",
+                    "on-secondary": "#3e2e08",
+                    "on-tertiary-fixed": "#1b1c1b",
+                    "surface-bright": "#3a3939",
+                    "inverse-surface": "#e5e2e1",
+                    "on-error": "#690005",
+                    "on-primary-container": "#554300",
+                    "error": "#ffb4ab",
+                    "on-primary-fixed": "#241a00",
+                    "on-secondary-container": "#ccb281",
+                    "tertiary-fixed": "#e3e2e0",
+                    "surface": "#131313",
+                    "on-tertiary": "#303130",
+                    "on-error-container": "#ffdad6",
+                    "tertiary-container": "#b3b3b1",
+                    "on-primary": "#3c2f00",
+                    "secondary-fixed-dim": "#dfc391",
+                    "primary": "#f2ca50",
+                    "tertiary-fixed-dim": "#c7c6c4",
+                    "on-primary-fixed-variant": "#574500",
+                    "on-surface-variant": "#d0c5af",
+                    "background": "#131313",
+                    "on-background": "#e5e2e1",
+                    "on-secondary-fixed": "#261900",
+                    "primary-fixed": "#ffe088",
+                    "error-container": "#93000a",
+                    "surface-variant": "#353534",
+                    "surface-container-highest": "#353534",
+                    "surface-container-high": "#2a2a2a",
+                    "on-tertiary-container": "#444544",
+                    "surface-tint": "#e9c349",
+                    "primary-container": "#d4af37",
+                    "primary-fixed-dim": "#e9c349",
+                    "inverse-on-surface": "#313030",
+                    "on-surface": "#e5e2e1",
+                    "secondary-fixed": "#fcdfab",
+                    "surface-dim": "#131313",
+                    "secondary": "#dfc391",
+                    "surface-container-lowest": "#0e0e0e",
+                    "secondary-container": "#57441d",
+                    "outline": "#99907c",
+                    "on-tertiary-fixed-variant": "#464746"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.25rem",
+                    "lg": "0.5rem",
+                    "xl": "0.75rem",
+                    "full": "9999px"
+            },
+            "fontFamily": {
+                    "headline": ["Noto Serif"],
+                    "body": ["Inter"],
+                    "label": ["Inter"]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    </style>
+</head>
+<body class="bg-background text-on-background font-body antialiased selection:bg-primary selection:text-on-primary">
+<!-- TopNavBar -->
+<nav class="fixed top-0 w-full z-50 bg-neutral-900/60 backdrop-blur-xl flex justify-between items-center px-8 h-20 max-w-full mx-auto shadow-2xl shadow-black/50">
+<div class="text-2xl font-bold tracking-tighter text-[#f2ca50] font-headline">NOCTURNE</div>
+<div class="hidden md:flex items-center gap-8 font-noto-serif text-sm tracking-tight">
+<a class="text-[#d0c5af] hover:text-[#f2ca50] transition-colors" href="#">Discovery</a>
+<a class="text-[#d0c5af] hover:text-[#f2ca50] transition-colors" href="#">Vibe Search</a>
+<a class="text-[#f2ca50] border-b border-[#d4af37] pb-1 font-semibold" href="#">Profile</a>
+</div>
+<div class="flex items-center gap-6">
+<button class="text-[#d0c5af] hover:bg-white/5 transition-all duration-300 p-2 rounded-full">
+<span class="material-symbols-outlined" data-icon="notifications">notifications</span>
+</button>
+<button class="text-[#d0c5af] hover:bg-white/5 transition-all duration-300 p-2 rounded-full">
+<span class="material-symbols-outlined" data-icon="favorite">favorite</span>
+</button>
+<div class="w-10 h-10 rounded-full overflow-hidden border border-outline-variant">
+<img alt="VIP User Profile" class="w-full h-full object-cover" data-alt="Professional headshot of a stylish person in a dark studio setting with warm cinematic lighting" src="https://lh3.googleusercontent.com/aida-public/AB6AXuD5MmsQTXXCD7R9fSAvQS61Y1EB87Msz-3kSWX0hN17GEPKbFljwNMsJzhB2AGNtsrsyY-JIjTm6xyugwbZiVzfH2Rw3uHyHxlQuQyoooHUk3Ub81_a0o2IakgQv6cLRlwJDIYEbgncLgLUkrSU0I8lK0MBspjAcMNMF6bKfQAOEBQTxgnX1ry7RwxsCctDnxJcwhNz37JBBTB0aw6yC7hZAdpR2U7crGjIv77rJAzlmMRfAFu8fz3WRaBhLAPlpVT4bNzZhTFSn3s"/>
+</div>
+</div>
+</nav>
+<main class="flex flex-col md:flex-row min-h-screen pt-20">
+<!-- Left: Sticky Cinematic Video (Higgsfield Simulation Style) -->
+<section class="relative w-full md:w-1/2 md:h-[calc(100vh-80px)] md:sticky md:top-20 overflow-hidden">
+<div class="absolute inset-0 bg-gradient-to-t from-background via-transparent to-transparent z-10"></div>
+<img alt="DJ Performing" class="w-full h-full object-cover scale-110" data-alt="Cinematic wide shot of a DJ performing at a large festival, vibrant golden lighting, immersive crowd atmosphere, high energy" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDNjbb0O6diyoOmpaFWEoBALIXCWgpxdP5AswCbGAd6bOpzqmKPxt8gpsW4qHi3Jo_Kn0NRSAzaoqpaJf_lbE2i0TKvCygCZrMHDHB2sSDN-nHCnq6lQvo4Viqj2e6KAQotpCRo6zNhxbz5EUzPV8o8ZigQ49Z42wz6r3mS-sJhNO0Rqc0TPTXpGheQOKrLuyX6ZoB31vOMWGvkJQt31xPQtsSDZVsxNUU-LPsaKgNpE3v2PUdfcWXSQNz2cUy7ezuZGIY_pQ-rK6g"/>
+<!-- Overlay DJ Name -->
+<div class="absolute bottom-16 left-12 z-20">
+<h1 class="text-7xl md:text-8xl font-headline font-extrabold tracking-tighter text-primary drop-shadow-2xl">
+                    AELXIS<br/>VOX
+                </h1>
+<p class="mt-4 font-label tracking-[0.3em] uppercase text-on-surface-variant text-sm opacity-80">Techno &amp; Experimental / Berlin</p>
+</div>
+</section>
+<!-- Right: Scrollable Content -->
+<section class="w-full md:w-1/2 p-8 md:p-16 space-y-24 bg-surface">
+<!-- Bio & SoundCloud Integration -->
+<div class="space-y-8">
+<div class="flex items-center gap-4">
+<div class="h-px flex-1 bg-outline-variant/30"></div>
+<span class="font-label text-xs tracking-widest text-primary uppercase">Identity</span>
+</div>
+<h2 class="text-4xl font-headline font-bold text-on-surface">The Pulse of Nocturnal Energy</h2>
+<p class="text-lg text-on-surface-variant leading-relaxed font-light">
+                    Redefining the festival landscape with cinematic soundscapes that blur the lines between reality and simulation. Aelxis Vox creates immersive sonic journeys that have headlined at Tomorrowland, Berghain, and Movement Detroit.
+                </p>
+<!-- SoundCloud Placeholder -->
+<div class="w-full h-40 bg-surface-container-lowest rounded-xl overflow-hidden border border-outline-variant/20 group relative flex items-center justify-center">
+<div class="absolute inset-0 bg-gradient-to-r from-primary/5 to-transparent"></div>
+<div class="z-10 flex flex-col items-center">
+<span class="material-symbols-outlined text-primary text-4xl mb-2" data-icon="play_circle">play_circle</span>
+<span class="font-label text-xs text-on-surface-variant tracking-widest uppercase">Latest Mix: Obsidian Echoes</span>
+</div>
+<img alt="Sound Waveform" class="absolute inset-0 w-full h-full object-cover opacity-20 group-hover:scale-105 transition-transform duration-700" data-alt="Digital representation of complex sound waves in a deep gold and black color palette" src="https://lh3.googleusercontent.com/aida-public/AB6AXuD_yOyEHAqoqoSOsFJRdkCota4NP43vUPCQxaYEkwGC-Y7n3Z1FQVpnP1b0dOxtJIbuLRpSTfF6mjnafXKcuF3AQo5mk6-8xaqQzcxM5xFx-B17hncrwJrBIJ-ShdFs8Ky4Qup3dOLt2xrod8AOIgUkJkGqHLkJm9Rn1bnjJ8q8Rw6tCVj9-BPuqhmXYkzpkE37J-WTcxLHjp13Pk-9sQiPZlT54VjXCjgmNtUkRFKTD-q3HcYLULWv4hI4hsOMI_DCmD1X5H-oaG0"/>
+</div>
+</div>
+<!-- Promo Asset Vault (Bento Grid Style) -->
+<div class="space-y-8">
+<div class="flex justify-between items-end">
+<h2 class="text-3xl font-headline font-bold text-on-surface">Promo Asset Vault</h2>
+<span class="font-label text-xs tracking-widest text-primary-container uppercase mb-1">Higgsfield Assets</span>
+</div>
+<div class="grid grid-cols-2 md:grid-cols-3 gap-4">
+<div class="aspect-square bg-surface-container-highest rounded-lg overflow-hidden group relative">
+<img alt="Asset 1" class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" data-alt="Abstract fluid simulation of golden particles swirling in a void, cinematic 8k detail" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBcOITPf4iXT_KMZeKb6_lnm-3FjEoqVVnnvSFLEa_SAWIno425iAFYa1ghKAzwBpebsCp5tiBQgGUWEqknN57H_tC0uNBBMBr99W2jqRAs-v55-hTuPYzBQmgl1SW-h_QRvWJDRt1LGHA_dNTQSk4bTL_sBcUlJUvhXj8V6pw5Q3_aZEIogqONvTwaVTY3bRjGMiAjTfllGONq-USSwlfeQS2MZaEFbhs6oYdQw3H81lhQvW4eSw_PfgJ-Ie2IDnFIopZUMjdYe6I"/>
+<div class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+<span class="material-symbols-outlined text-primary" data-icon="download">download</span>
+</div>
+</div>
+<div class="aspect-square bg-surface-container-highest rounded-lg overflow-hidden group relative">
+<img alt="Asset 2" class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" data-alt="Microscopic view of energy strands vibrating in gold and copper tones" src="https://lh3.googleusercontent.com/aida-public/AB6AXuD73tdM-RKvPbcUThwYRxzu3-56cgX6vPL-gGgy5yapUu7RyzxmzQNDmyrLeg5vqhYyTYUcg-AiRXwaZB0pwyB9tv0wsiFG_yBWtRwAXT3MAW4YfGTAoxwBUVL5Tv3jeQPzvxqDYVFc4QpsjAtka-DAlQwAbZfljuXDt8ivA88RrQc9mIsPuajFIqENdbaPl6WSytgTd1rGIKP1GCKsHBtx_AJEes54NdrMS46tRlKWyHnD6FTToxWX0-JuEjMJdTWPj6An61hMNqE"/>
+<div class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+<span class="material-symbols-outlined text-primary" data-icon="download">download</span>
+</div>
+</div>
+<div class="aspect-[3/4] md:row-span-2 bg-surface-container-highest rounded-lg overflow-hidden group relative">
+<img alt="Asset 3" class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" data-alt="Dramatic silhouette of a crowd with light beams cutting through smoke, cinematic lighting" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDUWTDAeDgYfqIQhvxS2m1cFrzK564dV5eOk15cE69bBhVVUXWrNocdJkIz_lll9HP6_R-i6zGG3IHnTLIROXSXRj1_RvEIkszcijjdyyfvxsHi1i7p1X58HUJwck1y99J921sCQoRPksrrBH8NVYRoQTO5sOPOb1kfBruWEvN_5FAhIGe_0csOwyBISc479nCQBoxsqOjghutx0Ooqrk-wTTr9YpNV2NRz1s2RULyqNqALu5eHt7ozPa-InRKwj-wjI-7fMZvdaf0"/>
+<div class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+<span class="material-symbols-outlined text-primary" data-icon="download">download</span>
+</div>
+</div>
+<div class="col-span-2 aspect-video bg-surface-container-highest rounded-lg overflow-hidden group relative">
+<img alt="Asset 4" class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" data-alt="Large scale festival stage with complex geometric light patterns and pyrotechnics" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCBpwy77c1ldLLT5SPCyacJzPbA3hDrE_i8yQlT6aPtrySj2eMincC99cJJXtGocxzyMaps8uLgrmd4BOEjx1xvWEPxlTQhvGj5_JLy5Jx54HKc7gI4sRu_xWMsfpIdk71if7qDJ7Rz8BUItNJo86KHDhNKB97aiz62G9FXlwTJfIsO9JFbLiHixWBBouY"/>
+<div class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+<span class="material-symbols-outlined text-primary" data-icon="download">download</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Tech Rider Card (Glassmorphism) -->
+<div class="relative p-1 rounded-2xl bg-gradient-to-br from-primary/20 to-transparent">
+<div class="bg-surface-container-low/60 backdrop-blur-3xl p-8 rounded-2xl border border-outline-variant/10">
+<h3 class="text-2xl font-headline font-bold mb-6 flex items-center gap-3">
+<span class="material-symbols-outlined text-primary" data-icon="settings_input_component">settings_input_component</span>
+                        Technical Rider
+                    </h3>
+<ul class="space-y-4 font-body text-on-surface-variant text-sm">
+<li class="flex justify-between items-center border-b border-outline-variant/20 pb-2">
+<span>Mixer</span>
+<span class="text-primary font-medium">Pioneer DJM-V10</span>
+</li>
+<li class="flex justify-between items-center border-b border-outline-variant/20 pb-2">
+<span>Players</span>
+<span class="text-primary font-medium">4x Pioneer CDJ-3000</span>
+</li>
+<li class="flex justify-between items-center border-b border-outline-variant/20 pb-2">
+<span>Monitoring</span>
+<span class="text-primary font-medium">2x d&amp;b Audiotechnik M4</span>
+</li>
+<li class="flex justify-between items-center border-b border-outline-variant/20 pb-2">
+<span>External FX</span>
+<span class="text-primary font-medium">Eventide H9 Max</span>
+</li>
+</ul>
+<button class="mt-8 w-full py-4 bg-gradient-to-r from-primary to-primary-container text-on-primary font-bold rounded-lg uppercase tracking-widest text-xs hover:opacity-90 transition-opacity">
+                        Download Full PDF Rider
+                    </button>
+</div>
+</div>
+<!-- Availability Calendar -->
+<div class="space-y-8">
+<h2 class="text-3xl font-headline font-bold">Booking Horizon</h2>
+<div class="grid grid-cols-7 gap-2">
+<div class="text-center text-[10px] uppercase tracking-tighter text-outline font-label mb-2">Mon</div>
+<div class="text-center text-[10px] uppercase tracking-tighter text-outline font-label mb-2">Tue</div>
+<div class="text-center text-[10px] uppercase tracking-tighter text-outline font-label mb-2">Wed</div>
+<div class="text-center text-[10px] uppercase tracking-tighter text-outline font-label mb-2">Thu</div>
+<div class="text-center text-[10px] uppercase tracking-tighter text-outline font-label mb-2">Fri</div>
+<div class="text-center text-[10px] uppercase tracking-tighter text-outline font-label mb-2">Sat</div>
+<div class="text-center text-[10px] uppercase tracking-tighter text-outline font-label mb-2">Sun</div>
+<div class="aspect-square bg-surface-container-highest/20 rounded flex items-center justify-center text-xs text-outline/50">26</div>
+<div class="aspect-square bg-surface-container-highest/20 rounded flex items-center justify-center text-xs text-outline/50">27</div>
+<div class="aspect-square bg-surface-container-highest/20 rounded flex items-center justify-center text-xs text-outline/50">28</div>
+<div class="aspect-square bg-surface-container-highest/20 rounded flex items-center justify-center text-xs text-outline/50">29</div>
+<div class="aspect-square bg-surface-container-highest/20 rounded flex items-center justify-center text-xs text-outline/50">30</div>
+<div class="aspect-square bg-surface-container-highest/20 rounded flex items-center justify-center text-xs text-outline/50">31</div>
+<div class="aspect-square bg-primary/20 border border-primary/40 rounded flex items-center justify-center text-xs text-primary font-bold">01</div>
+<div class="aspect-square bg-surface-container-highest/60 rounded flex items-center justify-center text-xs text-on-surface">02</div>
+<div class="aspect-square bg-surface-container-highest/60 rounded flex items-center justify-center text-xs text-on-surface">03</div>
+<div class="aspect-square bg-surface-container-highest/60 rounded flex items-center justify-center text-xs text-on-surface">04</div>
+<div class="aspect-square bg-surface-container-highest/60 rounded flex items-center justify-center text-xs text-on-surface">05</div>
+<div class="aspect-square bg-primary/20 border border-primary/40 rounded flex items-center justify-center text-xs text-primary font-bold">06</div>
+<div class="aspect-square bg-primary/20 border border-primary/40 rounded flex items-center justify-center text-xs text-primary font-bold">07</div>
+<div class="aspect-square bg-surface-container-highest/60 rounded flex items-center justify-center text-xs text-on-surface">08</div>
+</div>
+<div class="flex items-center gap-6 text-xs font-label">
+<div class="flex items-center gap-2">
+<div class="w-3 h-3 bg-primary/20 border border-primary/40 rounded-sm"></div>
+<span class="text-on-surface-variant">Confirmed Performance</span>
+</div>
+<div class="flex items-center gap-2">
+<div class="w-3 h-3 bg-surface-container-highest/60 rounded-sm"></div>
+<span class="text-on-surface-variant">Available for Booking</span>
+</div>
+</div>
+</div>
+</section>
+</main>
+<!-- Footer -->
+<footer class="w-full py-12 px-8 bg-[#0e0e0e] flex flex-col md:flex-row justify-between items-center gap-6 border-t border-[#4d4635]/20">
+<div class="text-lg font-serif text-[#f2ca50]">NOCTURNE</div>
+<div class="flex flex-wrap justify-center gap-8 font-inter text-xs tracking-widest uppercase">
+<a class="text-[#d0c5af] hover:text-[#f2ca50] transition-all" href="#">Instagram</a>
+<a class="text-[#d0c5af] hover:text-[#f2ca50] transition-all" href="#">Mixcloud</a>
+<a class="text-[#d0c5af] hover:text-[#f2ca50] transition-all" href="#">Privacy Policy</a>
+<a class="text-[#d0c5af] hover:text-[#f2ca50] transition-all" href="#">Terms of Service</a>
+</div>
+<div class="text-[#d0c5af] font-inter text-xs tracking-widest uppercase opacity-80">© 2024 NOCTURNE. Curated with Passion.</div>
+</footer>
+<script>
+const API = '';
+const djId = new URLSearchParams(location.search).get('dj') || 'aelxis-vox';
+
+// Fix nav links
+document.querySelectorAll('nav a').forEach(a => {
+  const t = a.textContent.trim();
+  if (t === 'Discovery') a.href = '/discovery.html';
+  else if (t === 'Vibe Search') a.href = '/search.html';
+  else if (t === 'Profile') a.href = '/vibe-search.html';
+});
+
+// Load DJ profile
+fetch(`${API}/api/djs/${djId}`)
+  .then(r => { if (!r.ok) throw new Error('Not found'); return r.json(); })
+  .then(dj => {
+    // Update DJ name overlay
+    const nameEl = document.querySelector('.text-7xl, .text-8xl');
+    if (nameEl) {
+      const parts = dj.name.split(' ');
+      nameEl.innerHTML = parts.length > 1
+        ? parts.slice(0, -1).join(' ') + '<br/>' + parts[parts.length - 1]
+        : dj.name;
+    }
+
+    // Update tagline
+    const taglineEl = document.querySelector('.font-label.tracking-\\[0\\.3em\\]');
+    if (taglineEl) taglineEl.textContent = dj.tagline || dj.genres?.join(' / ') || '';
+
+    // Update hero image
+    const heroImg = document.querySelector('section.relative img');
+    if (heroImg && dj.image_url) heroImg.src = dj.image_url;
+
+    // Update bio
+    const bioH2 = document.querySelector('h2.text-4xl');
+    if (bioH2) bioH2.textContent = `The Sound of ${dj.name}`;
+    const bioP = document.querySelector('.text-lg.text-on-surface-variant.leading-relaxed');
+    if (bioP && dj.bio) bioP.textContent = dj.bio;
+
+    // Update tech rider
+    if (dj.tech_rider) {
+      const riderItems = document.querySelectorAll('.space-y-4.font-body li');
+      const keys = ['mixer', 'players', 'monitoring', 'external_fx'];
+      riderItems.forEach((li, i) => {
+        const key = keys[i];
+        const val = dj.tech_rider[key];
+        if (val) {
+          const span = li.querySelector('.text-primary');
+          if (span) span.textContent = val;
+        }
+      });
+    }
+
+    // Update availability calendar — highlight booked dates
+    if (dj.availability && dj.availability.length) {
+      const bookedDays = dj.availability.map(d => parseInt(d.split('-')[2]));
+      document.querySelectorAll('.grid.grid-cols-7 .aspect-square').forEach(cell => {
+        const day = parseInt(cell.textContent.trim());
+        if (bookedDays.includes(day)) {
+          cell.className = 'aspect-square bg-primary/20 border border-primary/40 rounded flex items-center justify-center text-xs text-primary font-bold';
+        }
+      });
+    }
+
+    // Update soundcloud link text
+    if (dj.soundcloud_url) {
+      const mixLabel = document.querySelector('.font-label.text-xs.text-on-surface-variant.tracking-widest');
+      if (mixLabel) mixLabel.textContent = `Latest Mix: ${dj.name} Live Set`;
+    }
+
+    // Make "Download Full PDF Rider" into booking link
+    const riderBtn = document.querySelector('.bg-gradient-to-r.from-primary.to-primary-container');
+    if (riderBtn) {
+      riderBtn.textContent = 'BOOK THIS ARTIST';
+      riderBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        window.location.href = `/booking.html?dj=${dj.id}`;
+      });
+    }
+  })
+  .catch(() => {
+    console.warn('DJ not found, showing default content');
+  });
+</script>
+</body></html>
