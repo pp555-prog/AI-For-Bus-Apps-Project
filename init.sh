@@ -104,7 +104,8 @@ echo ""
 # 5. Smoke test — import backend without errors
 # -------------------------------------------------------------------
 echo "Running import smoke test..."
-$PYTHON -c "
+# Use `python` (not $PYTHON) so we pick up the venv interpreter with installed deps
+python -c "
 import sys
 sys.path.insert(0, '.')
 try:
