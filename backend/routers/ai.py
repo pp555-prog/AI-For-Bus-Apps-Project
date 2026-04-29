@@ -310,20 +310,41 @@ async def demo_performance_video(request: DemoPerformanceVideoRequest):
     if not request.image_data_urls:
         raise HTTPException(status_code=400, detail="Upload at least one performer image")
 
+    # Build input_references: venue scene first (so the model anchors on the
+    # room), then performer photos (for identity). Cap performer photos at 3
+    # so the venue image survives Seedance's 4-reference limit.
+    venue_image_url = (venue.image_url or "").strip()
+    performer_refs = request.image_data_urls[:3]
+    input_references: list[str] = []
+    if venue_image_url:
+        input_references.append(venue_image_url)
+    input_references.extend(performer_refs)
+
     prompt = (
-        f"Use the uploaded reference images as visual guidance for {request.performer_name}. "
-        f"Generate a cinematic music-performance video with native audio: "
-        f"{request.performer_name} is DJing at {venue.name} in {venue.city or 'the city'}, "
-        f"a venue with {', '.join(venue.vibe_tags)} atmosphere. Musical style: {request.style}. "
-        f"Show the performer behind decks, expressive crowd movement, venue-specific lighting, "
-        f"haze, strobes, and premium editorial camera movement. Preserve the performer's identity "
-        f"from the reference image without adding text, logos, watermarks, celebrities, or branded marks."
+        "You are receiving multiple visual references. "
+        + (
+            "Reference 1 is a photograph of the venue — use it as the literal physical setting "
+            "(architecture, lighting style, layout, materials). "
+            f"References 2{'+' if len(performer_refs) > 1 else ''} "
+            f"are photographs of the performer — use them for {request.performer_name}'s identity "
+            "(face, build, presentation). "
+            if venue_image_url
+            else f"All references are photographs of {request.performer_name} — use them for the performer's identity. "
+        )
+        + f"Generate a cinematic music-performance video: {request.performer_name} is DJing at "
+        f"{venue.name} in {venue.city or 'the city'}, a venue with "
+        f"{', '.join(venue.vibe_tags) or 'club'} atmosphere. Musical style: {request.style}. "
+        "Match the actual room shown in the venue reference: same materials, same scale, same "
+        "lighting language. Show the performer behind decks, expressive crowd movement, "
+        "venue-specific lighting, haze, strobes, and premium editorial camera movement. "
+        "Preserve the performer's identity from their reference photos without adding text, "
+        "logos, watermarks, celebrities, or branded marks."
     )
 
     try:
         result = await openrouter_video_client.submit_video(
             prompt,
-            request.image_data_urls,
+            input_references,
         )
     except openrouter_video_client.OpenRouterVideoError as exc:
         raise HTTPException(status_code=502, detail=str(exc)) from exc
