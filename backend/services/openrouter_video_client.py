@@ -33,7 +33,7 @@ async def submit_video(prompt: str, input_references: list[str] | None = None) -
         "duration": settings.OPENROUTER_VIDEO_DURATION,
         "resolution": settings.OPENROUTER_VIDEO_RESOLUTION,
         "aspect_ratio": settings.OPENROUTER_VIDEO_ASPECT_RATIO,
-        "generate_audio": True,
+        "generate_audio": False,
     }
     if input_references:
         payload["input_references"] = [
