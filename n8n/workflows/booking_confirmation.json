@@ -1,0 +1,94 @@
+{
+  "name": "NOCTURNE Booking Confirmation",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "booking-confirmation",
+        "responseMode": "onReceived",
+        "options": {
+          "responseCode": 200,
+          "responseData": "firstEntryJson"
+        }
+      },
+      "id": "4f36b9a3-4993-4a3d-90e0-a2d65bb9bf43",
+      "name": "Booking Confirmation Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -440,
+        0
+      ],
+      "webhookId": "booking-confirmation"
+    },
+    {
+      "parameters": {
+        "fromEmail": "NOCTURNE <no-reply@example.com>",
+        "toEmail": "={{ $json.body.dj_email }}",
+        "subject": "={{ 'New booking inquiry from ' + $json.body.venue_name }}",
+        "emailFormat": "text",
+        "text": "={{ 'Hi ' + $json.body.dj_name + ',\\n\\nYou have a new booking inquiry from ' + $json.body.venue_name + '.\\n\\nEvent date: ' + $json.body.event_date + '\\nBudget: ' + $json.body.budget + '\\n\\nMessage:\\n' + $json.body.message + '\\n\\nVenue contact: ' + $json.body.venue_email + '\\n\\n- NOCTURNE' }}",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "id": "bbdf84ee-4b51-4712-9731-2a5c0d76c8ce",
+      "name": "Email DJ",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        -120,
+        -120
+      ]
+    },
+    {
+      "parameters": {
+        "fromEmail": "NOCTURNE <no-reply@example.com>",
+        "toEmail": "={{ $json.body.venue_email }}",
+        "subject": "={{ 'Booking inquiry sent to ' + $json.body.dj_name }}",
+        "emailFormat": "text",
+        "text": "={{ 'Hi ' + $json.body.venue_name + ',\\n\\nYour booking inquiry has been sent to ' + $json.body.dj_name + '.\\n\\nEvent date: ' + $json.body.event_date + '\\nBudget: ' + $json.body.budget + '\\n\\nMessage sent:\\n' + $json.body.message + '\\n\\nDJ contact: ' + $json.body.dj_email + '\\n\\n- NOCTURNE' }}",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "id": "71d1a2cb-2d10-48b3-9f0f-b4eed36f1a1f",
+      "name": "Email Venue",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        -120,
+        120
+      ]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Booking Confirmation Webhook": {
+      "main": [
+        [
+          {
+            "node": "Email DJ",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Email Venue",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "7db09ef0-f5b8-4df6-9ee8-0b828e2d9842",
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "id": "nocturne-booking-confirmation",
+  "tags": []
+}

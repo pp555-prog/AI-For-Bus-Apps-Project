@@ -23,6 +23,7 @@ def _parse_json_field(v: Any) -> Any:
 class DJ(BaseModel):
     id: str
     name: str
+    email: str | None = None
     tagline: str | None = None
     genres: list[str] = []
     bio: str | None = None
@@ -52,15 +53,18 @@ class DJ(BaseModel):
 class DJListItem(BaseModel):
     id: str
     name: str
+    email: str | None = None
     tagline: str | None = None
     genres: list[str] = []
+    bio: str | None = None
     image_url: str | None = None
     setup: str | None = None
     fee_tier: str | None = None
     fee_from: int | None = None
     badge: str | None = None
+    vibe_keywords: list[str] = []
 
-    @field_validator("genres", mode="before")
+    @field_validator("genres", "vibe_keywords", mode="before")
     @classmethod
     def _parse_list(cls, v: Any) -> list[str]:
         return _parse_json_field(v) if v else []
@@ -71,6 +75,7 @@ class DJListItem(BaseModel):
 class Venue(BaseModel):
     id: str
     name: str
+    email: str | None = None
     city: str | None = None
     capacity: int | None = None
     vibe_tags: list[str] = []
@@ -93,6 +98,7 @@ class BookingCreate(BaseModel):
     start_time: str
     set_length: str
     offered_fee: int
+    message: str | None = None
 
 
 class BookingResponse(BaseModel):
@@ -103,6 +109,7 @@ class BookingResponse(BaseModel):
     start_time: str
     set_length: str
     offered_fee: int
+    message: str | None = None
     status: str
     created_at: str | None = None
 
@@ -138,6 +145,81 @@ class PromoPromptRequest(BaseModel):
 class PartySimulationRequest(BaseModel):
     dj_id: str
     venue_id: str
+
+
+class MusicPreviewRequest(BaseModel):
+    dj_id: str
+    venue_id: str
+
+
+class PartySimulationVideoRequest(BaseModel):
+    dj_id: str
+    venue_id: str
+
+
+class DJVoiceIntroRequest(BaseModel):
+    dj_id: str
+
+
+class DemoAssetResponse(BaseModel):
+    audio_url: str | None = None
+    video_url: str | None = None
+    provider: str
+    generated: bool
+    note: str
+
+
+class DemoVenueMatchRequest(BaseModel):
+    performer_name: str
+    style: str
+    image_data_urls: list[str] = []
+    audio_data_url: str | None = None
+
+
+class DemoVenueMatch(BaseModel):
+    venue: Venue
+    score: int
+    reasoning: str
+
+
+class DemoVenueMatchResponse(BaseModel):
+    results: list[DemoVenueMatch]
+    interpretation: str | None = None
+    audio_analysis: dict | None = None
+    combined_style: str | None = None
+    matcher: str = "deterministic"
+
+
+class DemoPerformanceVideoRequest(BaseModel):
+    performer_name: str
+    style: str
+    venue_id: str
+    image_data_urls: list[str] = []
+
+
+class DemoPerformanceVideoResponse(BaseModel):
+    job_id: str | None = None
+    status: str
+    polling_url: str | None = None
+    video_url: str | None = None
+    provider: str
+    generated: bool
+    note: str
+
+
+class DemoMusicPreviewRequest(BaseModel):
+    performer_name: str
+    style: str
+    venue_id: str
+
+
+class DemoMusicPreviewResponse(BaseModel):
+    audio_url: str | None = None
+    audio_data_url: str | None = None
+    prompt: str
+    provider: str
+    generated: bool
+    note: str
 
 
 # ── Radar ────────────────────────────────────────────────────────────────────

@@ -21,6 +21,7 @@ SEED_DJS = [
     {
         "id": "amara-voss",
         "name": "AMARA VOSS",
+        "email": "amara.voss@nocturne.test",
         "tagline": "Melodic Techno / Berlin",
         "genres": _j(["Melodic Techno", "Deep House"]),
         "bio": (
@@ -49,6 +50,7 @@ SEED_DJS = [
     {
         "id": "kaleidos",
         "name": "KALEIDOS",
+        "email": "kaleidos@nocturne.test",
         "tagline": "Minimal / Dub",
         "genres": _j(["Minimal Techno", "Dub Techno"]),
         "bio": (
@@ -76,6 +78,7 @@ SEED_DJS = [
     {
         "id": "synesthesia",
         "name": "SYNESTHESIA",
+        "email": "synesthesia@nocturne.test",
         "tagline": "House / Groove",
         "genres": _j(["House", "Deep Groove", "Soulful House"]),
         "bio": (
@@ -103,6 +106,7 @@ SEED_DJS = [
     {
         "id": "soren-orsk",
         "name": "SOREN ORSK",
+        "email": "soren.orsk@nocturne.test",
         "tagline": "Deep Melodic / Industrial",
         "genres": _j(["Deep Melodic", "Industrial Techno"]),
         "bio": (
@@ -130,6 +134,7 @@ SEED_DJS = [
     {
         "id": "evelina-voss",
         "name": "EVELINA VOSS",
+        "email": "evelina.voss@nocturne.test",
         "tagline": "Progressive House / Peak Time",
         "genres": _j(["Progressive House", "Peak Time Techno"]),
         "bio": (
@@ -157,6 +162,7 @@ SEED_DJS = [
     {
         "id": "modular-mantra",
         "name": "MODULAR MANTRA",
+        "email": "modular.mantra@nocturne.test",
         "tagline": "Experimental / Ambient Techno",
         "genres": _j(["Experimental Techno", "Ambient", "Modular Synthesis"]),
         "bio": (
@@ -184,6 +190,7 @@ SEED_DJS = [
     {
         "id": "aelxis-vox",
         "name": "AELXIS VOX",
+        "email": "aelxis.vox@nocturne.test",
         "tagline": "Techno & Experimental / Berlin",
         "genres": _j(["Techno", "Experimental", "Industrial"]),
         "bio": (
@@ -212,6 +219,7 @@ SEED_DJS = [
     {
         "id": "lumina-pulse",
         "name": "LUMINA PULSE",
+        "email": "lumina.pulse@nocturne.test",
         "tagline": "Electronic / Melodic Techno",
         "genres": _j(["Melodic Techno", "Electronic"]),
         "bio": (
@@ -239,6 +247,7 @@ SEED_DJS = [
     {
         "id": "dj-spinn",
         "name": "DJ SPINN",
+        "email": "dj.spinn@nocturne.test",
         "tagline": "Hard Techno / Rave",
         "genres": _j(["Hard Techno", "Rave", "Acid"]),
         "bio": (
@@ -266,6 +275,7 @@ SEED_DJS = [
     {
         "id": "sama",
         "name": "SAMA'",
+        "email": "sama@nocturne.test",
         "tagline": "Afro House / Organic",
         "genres": _j(["Afro House", "Organic House", "World Electronic"]),
         "bio": (
@@ -298,6 +308,7 @@ SEED_VENUES = [
     {
         "id": "berghain-berlin",
         "name": "BERGHAIN",
+        "email": "bookings.berghain@nocturne.test",
         "city": "Berlin",
         "capacity": 1500,
         "vibe_tags": _j(["industrial", "underground", "legendary"]),
@@ -307,6 +318,7 @@ SEED_VENUES = [
     {
         "id": "the-nest",
         "name": "THE NEST",
+        "email": "bookings.the.nest@nocturne.test",
         "city": "London",
         "capacity": 300,
         "vibe_tags": _j(["intimate", "underground", "velvet"]),
@@ -316,6 +328,7 @@ SEED_VENUES = [
     {
         "id": "basement",
         "name": "BASEMENT",
+        "email": "bookings.basement@nocturne.test",
         "city": "New York",
         "capacity": 600,
         "vibe_tags": _j(["industrial", "raw", "concrete"]),
@@ -325,6 +338,7 @@ SEED_VENUES = [
     {
         "id": "the-archive-ibiza",
         "name": "THE ARCHIVE",
+        "email": "bookings.the.archive@nocturne.test",
         "city": "Ibiza",
         "capacity": 2000,
         "vibe_tags": _j(["immersive", "cinematic", "island"]),
@@ -334,6 +348,7 @@ SEED_VENUES = [
     {
         "id": "fabric-london",
         "name": "FABRIC LONDON",
+        "email": "bookings.fabric@nocturne.test",
         "city": "London",
         "capacity": 1600,
         "vibe_tags": _j(["underground", "institution", "bass"]),
@@ -343,6 +358,7 @@ SEED_VENUES = [
     {
         "id": "amnesia-ibiza",
         "name": "AMNESIA IBIZA",
+        "email": "bookings.amnesia@nocturne.test",
         "city": "Ibiza",
         "capacity": 5000,
         "vibe_tags": _j(["massive", "festival", "ibiza"]),
@@ -352,6 +368,7 @@ SEED_VENUES = [
     {
         "id": "printworks",
         "name": "PRINTWORKS",
+        "email": "bookings.printworks@nocturne.test",
         "city": "London",
         "capacity": 3000,
         "vibe_tags": _j(["warehouse", "daylight", "industrial"]),
@@ -372,6 +389,7 @@ def _seed_bookings() -> list[dict]:
             "start_time": "23:00",
             "set_length": "3 Hours (Extended)",
             "offered_fee": 2400,
+            "message": "Seed booking for the live radar feed.",
             "status": "confirmed",
             "created_at": (now - timedelta(minutes=2)).isoformat(),
         },
@@ -382,6 +400,7 @@ def _seed_bookings() -> list[dict]:
             "start_time": "01:00",
             "set_length": "3 Hours (Extended)",
             "offered_fee": 4500,
+            "message": "Seed booking for the live radar feed.",
             "status": "confirmed",
             "created_at": (now - timedelta(minutes=12)).isoformat(),
         },
@@ -392,6 +411,7 @@ def _seed_bookings() -> list[dict]:
             "start_time": "14:00",
             "set_length": "2 Hours",
             "offered_fee": 1800,
+            "message": "Seed booking for the live radar feed.",
             "status": "confirmed",
             "created_at": (now - timedelta(hours=1)).isoformat(),
         },
@@ -403,6 +423,23 @@ def _seed_bookings() -> list[dict]:
 async def seed_db():
     """Insert sample data if tables are empty."""
     async with aiosqlite.connect(DATABASE_PATH) as db:
+        for dj in SEED_DJS:
+            await db.execute(
+                "UPDATE djs SET email = ? WHERE id = ? AND (email IS NULL OR email = '')",
+                [dj["email"], dj["id"]],
+            )
+        for venue in SEED_VENUES:
+            await db.execute(
+                "UPDATE venues SET email = ? WHERE id = ? AND (email IS NULL OR email = '')",
+                [venue["email"], venue["id"]],
+            )
+        await db.execute(
+            """UPDATE bookings
+               SET message = 'Seed booking for the live radar feed.'
+               WHERE message IS NULL OR message = ''"""
+        )
+        await db.commit()
+
         row = await db.execute_fetchall("SELECT COUNT(*) as c FROM djs")
         if row[0][0] > 0:
             return  # already seeded

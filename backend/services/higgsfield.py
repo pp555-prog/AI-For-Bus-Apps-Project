@@ -1,11 +1,11 @@
 """Higgsfield video generation integration.
 
-For the MVP, this module uses Claude to generate creative prompts that
-would be sent to the Higgsfield API. Actual Higgsfield API calls can be
-added once the API key and SDK are available.
+For the MVP, this module uses the configured LLM (via OpenRouter) to generate
+creative prompts that would be sent to the Higgsfield API. Actual Higgsfield
+API calls can be added once the API key and SDK are available.
 """
 
-from backend.services.claude_client import complete
+from backend.services.llm_client import complete
 
 
 SYSTEM_PROMPT = """\
@@ -39,7 +39,7 @@ def generate_party_simulation_prompt(
     venue_vibe_tags: list[str],
     venue_capacity: int | None = None,
 ) -> dict:
-    """Use Claude to create a Higgsfield-ready video generation prompt."""
+    """Use the LLM to create a Higgsfield-ready video generation prompt."""
     user_message = (
         f"DJ: {dj_name} ({dj_tagline})\n"
         f"Genres: {', '.join(dj_genres)}\n"

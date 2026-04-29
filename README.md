@@ -10,24 +10,33 @@ The platform is designed to reduce the friction of booking the right DJ for the 
 
 ## Key Features
 
-- **Smart Matching** — Match DJs and venues based on budget, music genre, crowd size, vibe, and availability
-- **Party Simulations** — Generate AI video previews of what an event would look like using video generation AI
-- **Promotional Content** — Auto-generate promo materials (videos, reels, clips) for DJs and venues
-- **AI Music Previews** — Let venues hear AI-generated music samples tailored to their space via Suno
-- **Voice Matching** — Use ElevenLabs to incorporate voice features (e.g., DJ intros, venue announcements, promo narration)
-- **Marketplace UI** — Clean, intuitive interface built with Stitch
+### v1 — Live
+- **Smart Matching** — LLM-powered (default: `openai/gpt-oss-120b:free` via OpenRouter) matches DJs and venues by genre, vibe, capacity, and location, returning ranked results with written reasoning
+- **AI Bio Generation** — drafts DJ profile bios from structured input (genres, style tags, experience)
+- **AI Promo Prompts** — generates promo-content prompts tailored to a DJ's brand and a venue's vibe
+- **Party Simulation Text** — produces descriptive scene text used to seed downstream video tools
+- **Audio-driven Venue Match** — performers can upload a track on `/personal-demo.html`; an audio-input LLM (`google/gemini-2.5-flash` via OpenRouter) listens to the first 30s and returns a structured style read (genres, BPM, energy, mood, venue archetypes) that augments the typed style for venue matching
+- **AI Music Previews** — Google Lyria 3 generates a ~30s instrumental clip tailored to the matched venue + performer style (routed through OpenRouter; `google/lyria-3-clip-preview`, ~$0.04 per clip)
+- **Personalized video previews** — OpenRouter video generation submits an async reference-video job from uploaded performer photos for the class demo (`bytedance/seedance-2.0`, 720p, 10s)
+- **Booking Confirmation Emails** — n8n workflow sends templated emails to both DJ and venue when a booking inquiry is submitted
+- **Marketplace UI** — Clean, intuitive interface built with Stitch (Tailwind CSS)
+
+### v2 — Roadmap
+- **Voice Features** — ElevenLabs DJ intros, venue announcements, and AI promo narration
 
 ## Tech Stack
 
-| Tool / Platform | Purpose |
-|----------------|---------|
-| [Stitch](https://stitch.withgoogle.com) | Frontend UI / marketplace interface (Tailwind CSS) |
-| [FastAPI](https://fastapi.tiangolo.com) | Python backend API |
-| [Claude API](https://docs.anthropic.com) | AI-powered vibe matching and content generation |
-| [Suno](https://suno.com) | AI music generation for previews and promo |
-| [ElevenLabs](https://elevenlabs.io) | Voice synthesis for DJ intros, narration, and voice matching |
-| [Higgsfield](https://higgsfield.ai) | AI video generation for party simulations |
-| SQLite | Lightweight database for MVP |
+| Tool / Platform | Phase | Purpose |
+|----------------|-------|---------|
+| [Stitch](https://stitch.withgoogle.com) | v1 — live | Frontend UI / marketplace interface (Tailwind CSS) |
+| [FastAPI](https://fastapi.tiangolo.com) | v1 — live | Python backend API |
+| [OpenRouter](https://openrouter.ai) | **v1 — live** | Single-key router for the LLM behind vibe matching, bio generation, promo prompts, and party simulation text. Active model is set by `OPENROUTER_MODEL` (default: `openai/gpt-oss-120b:free`) and can be swapped to Claude, Gemini, DeepSeek, etc. without code changes. |
+| SQLite | v1 — live | Lightweight database for MVP |
+| [n8n](https://n8n.io) | **v1 — live** | Workflow automation — booking confirmation emails (DJ + venue) on every booking inquiry |
+| [OpenAI Codex](https://platform.openai.com/docs/guides/code) | dev tool | AI-assisted code generation used during development; not a runtime feature |
+| [Google Lyria 3](https://openrouter.ai/google/lyria-3-clip-preview) | **v1 — live** | AI music generation (instrumental clips) routed through OpenRouter; default model `google/lyria-3-clip-preview` |
+| [OpenRouter Video](https://openrouter.ai/docs/guides/overview/multimodal/video-generation) | **v1 — live** (class demo) | Async AI video generation for personalized party simulations; default model `bytedance/seedance-2.0` |
+| [ElevenLabs](https://elevenlabs.io) | v2 | Voice synthesis for DJ intros, narration, voice matching |
 
 ## How It Works
 
@@ -41,39 +50,48 @@ DJ Profile          Venue Profile
                           ┌──────────────────────┼──────────────────────┐
                           ▼                      ▼                      ▼
                    Music Preview          Party Simulation        Promo Materials
-                   (Suno)                 (Video AI)              (Video + ElevenLabs)
+                   (Lyria 3)              (OpenRouter Video)      (Video + ElevenLabs)
 ```
 
 ## Project Structure
 
-```
+```text
 AI-For-Bus-Apps-Project/
-├── backend/                  # FastAPI backend
-│   ├── main.py               # App entry point, mounts static UI + API routers
-│   ├── config.py             # Pydantic Settings (.env reader)
-│   ├── database.py           # SQLite via aiosqlite
-│   ├── models.py             # Pydantic request/response schemas
-│   ├── seed.py               # 10 DJs, 7 venues, 3 bookings — auto-seeds on first run
-│   ├── routers/
-│   │   ├── djs.py            # GET /api/djs, GET /api/djs/{id}
-│   │   ├── venues.py         # GET /api/venues, GET /api/venues/{id}
-│   │   ├── bookings.py       # POST /api/bookings, GET /api/bookings
-│   │   ├── ai.py             # POST /api/ai/vibe-match, /generate-bio, /promo-prompt, /party-simulation
-│   │   └── radar.py          # GET /api/radar (live booking feed)
-│   └── services/
-│       ├── claude_client.py  # Anthropic SDK wrapper
-│       ├── vibe_matcher.py   # Claude-powered DJ matching engine
-│       └── higgsfield.py     # Higgsfield video generation prompts
-├── ui/                       # Stitch-generated frontend (HTML/Tailwind CSS)
-│   ├── discovery.html        # Home — editorial DJ grid + live radar + venue showcase
-│   ├── search.html           # Vibe search — AI filter sidebar + DJ result cards
-│   ├── vibe-search.html      # DJ profile — bio, promo vault, tech rider, calendar
-│   └── booking.html          # Booking offer form with escrow CTA
-├── requirements.txt
-├── .env.example
-├── run.py                    # python run.py → starts uvicorn on port 8000
-├── SPEC.docx                 # Product Requirements Document
-└── README.md
+|-- backend/                  # FastAPI backend
+|   |-- main.py               # App entry point, mounts static UI + API routers
+|   |-- config.py             # Pydantic Settings (.env reader)
+|   |-- database.py           # SQLite via aiosqlite
+|   |-- models.py             # Pydantic request/response schemas
+|   |-- seed.py               # 10 DJs, 7 venues, 3 bookings; auto-seeds on first run
+|   |-- routers/
+|   |   |-- djs.py            # GET /api/djs, GET /api/djs/{id}
+|   |   |-- venues.py         # GET /api/venues, GET /api/venues/{id}
+|   |   |-- bookings.py       # Booking create/list/status endpoints
+|   |   |-- ai.py             # Vibe match, demo venue match, OpenRouter video endpoints
+|   |   `-- radar.py          # GET /api/radar (live booking feed)
+|   `-- services/
+|       |-- llm_client.py     # LLM wrapper; OpenAI SDK pointed at OpenRouter
+|       |-- vibe_matcher.py   # LLM-powered DJ + venue matching engine
+|       |-- audio_analyzer.py # OpenRouter audio-input client (style read for personalized demo)
+|       |-- openrouter_video_client.py # OpenRouter async video generation
+|       |-- lyria_client.py   # OpenRouter Lyria 3 music generation
+|       `-- higgsfield.py     # Legacy party-simulation prompt helper
+|-- ui/                       # Stitch-generated frontend (HTML/Tailwind CSS)
+|   |-- discovery.html        # Home; editorial DJ grid + live radar + venue showcase
+|   |-- search.html           # Vibe search; AI filter sidebar + DJ result cards
+|   |-- vibe-search.html      # DJ profile; bio, promo vault, tech rider, calendar
+|   |-- personal-demo.html    # Personalized class demo: photo upload, venue match, video job
+|   `-- booking.html          # Booking offer form with escrow CTA
+|-- AGENTS.md                 # Universal AI agent onboarding; READ FIRST
+|-- CLAUDE.md                 # Claude-specific notes (defers to AGENTS.md)
+|-- Review at the start of each session and update at the end of each session.txt
+|-- SPEC.docx                 # Product Requirements Document (incl. eval plan in Section 9)
+|-- README.md                 # This file; public-facing project intro
+|-- init.sh                   # First-time setup
+|-- run.py                    # python run.py starts uvicorn on port 8000
+|-- requirements.txt
+|-- .env.example
+`-- nocturne.db               # SQLite (auto-created on first run; gitignored)
 ```
 
 ## Getting Started
@@ -81,7 +99,8 @@ AI-For-Bus-Apps-Project/
 ### Prerequisites
 
 - Python 3.10+
-- Anthropic API key (for Claude-powered vibe matching)
+- OpenRouter API key (free tier works — get one at https://openrouter.ai/settings/keys, no credit card required)
+- n8n Cloud workspace (for v1 booking confirmation emails)
 
 ### Installation
 
@@ -95,8 +114,41 @@ pip install -r requirements.txt
 
 ```bash
 cp .env.example .env
-# Edit .env and add your ANTHROPIC_API_KEY
+# Edit .env and add your OPENROUTER_API_KEY
+# (optional) change OPENROUTER_MODEL — default is openai/gpt-oss-120b:free
 ```
+
+OpenRouter video, music, and audio-input generation all use the same
+`OPENROUTER_API_KEY` as the LLM features. Configure `OPENROUTER_VIDEO_MODEL`,
+`OPENROUTER_VIDEO_RESOLUTION`, `OPENROUTER_VIDEO_DURATION`, and
+`OPENROUTER_VIDEO_ASPECT_RATIO` in `.env` to control the personalized
+performance-video demo. `OPENROUTER_MUSIC_MODEL` controls Lyria (default
+`google/lyria-3-clip-preview`); `OPENROUTER_AUDIO_MODEL` controls the
+audio-input model used for the "listen to my track" step (default
+`google/gemini-2.5-flash`).
+
+For n8n Cloud, create or open the project workspace in n8n Cloud and copy its
+workspace URL into `N8N_CLOUD_WORKSPACE_URL` in `.env`. Leave
+`N8N_BOOKING_WEBHOOK` blank until the booking confirmation workflow is created;
+n8n will provide the production webhook URL from the Webhook node after that
+workflow exists and is activated.
+
+#### n8n booking confirmation workflow
+
+The booking confirmation workflow lives at
+`n8n/workflows/booking_confirmation.json`.
+
+1. In n8n Cloud, go to **Workflows** -> **Add workflow** -> **Import from File**
+   and select `n8n/workflows/booking_confirmation.json`.
+2. Open each **Send Email** node and choose or create an SMTP credential. Any
+   SMTP provider works; update the `From Email` field if your provider requires
+   an approved sender address.
+3. Open the **Booking Confirmation Webhook** node. After the workflow is saved
+   and activated, n8n shows the Production URL for the POST webhook at path
+   `booking-confirmation`. Copy that production URL into `.env` as
+   `N8N_BOOKING_WEBHOOK`.
+4. Activate the workflow in n8n Cloud. Keep it inactive until the SMTP
+   credential is configured and both email nodes are ready to send.
 
 ### Run
 
@@ -112,7 +164,17 @@ FastAPI auto-generates interactive docs at **http://localhost:8000/docs**.
 
 ## Course Context
 
-This project was developed for **NBA 6925: Advanced AI for Business Applications** at Cornell University.
+This project was developed for **NBA 6925: Advanced AI for Business Applications** at Cornell University. See `SPEC.docx` Section 9 for the AI evaluation plan and target metrics.
+
+## For AI Agents (Claude, Codex, Cursor, etc.)
+
+If you are an AI agent working on this codebase:
+
+1. **Read [`AGENTS.md`](./AGENTS.md) first.** It is the canonical onboarding document.
+2. **Then read the session log** — `Review at the start of each session and update at the end of each session.txt` in the project root.
+3. **Append a new `SESSION N` block** to that log at the end of every working session.
+
+Claude Code users: `CLAUDE.md` auto-loads and points to the same place.
 
 ## License
 

@@ -1,0 +1,22 @@
+pair_id,venue_id,venue_name,dj_id,dj_name,claude_rank,claude_score,claude_reasoning
+1,amnesia-ibiza,AMNESIA IBIZA,evelina-voss,EVELINA VOSS,1,96,Progressive House and Peak Time Techno are tailor‑made for massive Ibiza super‑clubs and large festival crowds.
+2,amnesia-ibiza,AMNESIA IBIZA,amara-voss,AMARA VOSS,2,89,"Melodic Techno with deep house roots can provide soaring, emotive peaks that drive a 5,000‑person dancefloor."
+3,amnesia-ibiza,AMNESIA IBIZA,dj-spinn,DJ SPINN,3,84,"Hard Techno and Rave flavors bring the relentless energy needed for a festival‑style, massive vibe."
+4,basement,BASEMENT,soren-orsk,SOREN ORSK,1,92,Focus on Deep Melodic and Industrial Techno matches the raw concrete vibe while keeping it immersive.
+5,basement,BASEMENT,aelxis-vox,AELXIS VOX,2,88,"Techno plus Experimental and Industrial genres provide the gritty, avant‑garde feel ideal for an industrial space."
+6,basement,BASEMENT,kaleidos,KALEIDOS,3,84,"Minimal Techno and Dub Techno deliver a stripped‑down, concrete‑wall aesthetic perfect for a minimalist setting."
+7,berghain-berlin,BERGHAIN,aelxis-vox,AELXIS VOX,1,95,"Combines hard‑edge techno with experimental and industrial sounds, perfect for a legendary Berlin underground vibe."
+8,berghain-berlin,BERGHAIN,soren-orsk,SOREN ORSK,2,90,"Specializes in deep melodic yet industrial techno, delivering the dark, immersive atmosphere requested."
+9,berghain-berlin,BERGHAIN,dj-spinn,DJ SPINN,3,65,"Brings hard techno and rave energy that can translate into an intense, underground feel for a large crowd."
+10,fabric-london,FABRIC LONDON,dj-spinn,DJ SPINN,1,94,"Hard Techno, Rave and Acid deliver the deep bass and uncompromising energy Fabric is famed for."
+11,fabric-london,FABRIC LONDON,aelxis-vox,AELXIS VOX,2,89,"Techno with experimental and industrial edges provides a dark, bass‑driven underground atmosphere."
+12,fabric-london,FABRIC LONDON,soren-orsk,SOREN ORSK,3,83,"Deep Melodic and Industrial Techno blend heavy low‑end with a sophisticated, institutional feel."
+13,printworks,PRINTWORKS,aelxis-vox,AELXIS VOX,1,95,"Combines techno with experimental and industrial elements, perfect for an industrial daylight rave."
+14,printworks,PRINTWORKS,soren-orsk,SOREN ORSK,2,89,Deep melodic and industrial techno gives a driving yet atmospheric warehouse feel.
+15,printworks,PRINTWORKS,amara-voss,AMARA VOSS,3,84,Melodic techno with Berlin‑style precision matches the daylight warehouse energy.
+16,the-archive-ibiza,THE ARCHIVE,amara-voss,AMARA VOSS,1,94,Melodic techno with a cinematic depth fits the immersive island atmosphere and her elite status suits a high‑profile Ibiza venue.
+17,the-archive-ibiza,THE ARCHIVE,lumina-pulse,LUMINA PULSE,2,89,"Focus on melodic techno and electronic textures offers a dreamy, cinematic feel perfect for a large, immersive space."
+18,the-archive-ibiza,THE ARCHIVE,evelina-voss,EVELINA VOSS,3,85,"Progressive house and peak‑time techno deliver uplifting, island‑vibe energy while maintaining a cinematic flow."
+19,the-nest,THE NEST,lumina-pulse,LUMINA PULSE,1,94,Melodic Techno with an electronic edge fits a velvet‑soft underground feel while staying intimate and sophisticated.
+20,the-nest,THE NEST,amara-voss,AMARA VOSS,2,90,"Berlin‑style melodic techno and deep house deliver a warm, underground atmosphere perfect for a small, lit venue."
+21,the-nest,THE NEST,kaleidos,KALEIDOS,3,84,"Minimal and dub techno provide a spacious yet intimate backdrop, matching the club's subdued lighting."

@@ -11,6 +11,13 @@ async def get_db() -> aiosqlite.Connection:
     return db
 
 
+async def _ensure_column(db: aiosqlite.Connection, table: str, column: str, definition: str):
+    """Add a column to an existing SQLite table if it is missing."""
+    rows = await db.execute_fetchall(f"PRAGMA table_info({table})")
+    if column not in {row[1] for row in rows}:
+        await db.execute(f"ALTER TABLE {table} ADD COLUMN {column} {definition}")
+
+
 async def init_db():
     """Create tables if they don't exist."""
     async with aiosqlite.connect(DATABASE_PATH) as db:
@@ -19,6 +26,7 @@ async def init_db():
             CREATE TABLE IF NOT EXISTS djs (
                 id TEXT PRIMARY KEY,
                 name TEXT NOT NULL,
+                email TEXT,
                 tagline TEXT,
                 genres TEXT,
                 bio TEXT,
@@ -39,6 +47,7 @@ async def init_db():
             CREATE TABLE IF NOT EXISTS venues (
                 id TEXT PRIMARY KEY,
                 name TEXT NOT NULL,
+                email TEXT,
                 city TEXT,
                 capacity INTEGER,
                 vibe_tags TEXT,
@@ -55,9 +64,13 @@ async def init_db():
                 start_time TEXT,
                 set_length TEXT,
                 offered_fee INTEGER,
+                message TEXT,
                 status TEXT DEFAULT 'pending',
                 created_at TEXT DEFAULT CURRENT_TIMESTAMP
             );
             """
         )
+        await _ensure_column(db, "djs", "email", "TEXT")
+        await _ensure_column(db, "venues", "email", "TEXT")
+        await _ensure_column(db, "bookings", "message", "TEXT")
         await db.commit()

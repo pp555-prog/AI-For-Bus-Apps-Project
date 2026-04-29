@@ -107,7 +107,7 @@
 </div>
 </nav>
 <main class="flex flex-col md:flex-row min-h-screen pt-20">
-<!-- Left: Sticky Cinematic Video (Higgsfield Simulation Style) -->
+<!-- Left: Sticky Cinematic Video (OpenRouter Video Simulation Style) -->
 <section class="relative w-full md:w-1/2 md:h-[calc(100vh-80px)] md:sticky md:top-20 overflow-hidden">
 <div class="absolute inset-0 bg-gradient-to-t from-background via-transparent to-transparent z-10"></div>
 <img alt="DJ Performing" class="w-full h-full object-cover scale-110" data-alt="Cinematic wide shot of a DJ performing at a large festival, vibrant golden lighting, immersive crowd atmosphere, high energy" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDNjbb0O6diyoOmpaFWEoBALIXCWgpxdP5AswCbGAd6bOpzqmKPxt8gpsW4qHi3Jo_Kn0NRSAzaoqpaJf_lbE2i0TKvCygCZrMHDHB2sSDN-nHCnq6lQvo4Viqj2e6KAQotpCRo6zNhxbz5EUzPV8o8ZigQ49Z42wz6r3mS-sJhNO0Rqc0TPTXpGheQOKrLuyX6ZoB31vOMWGvkJQt31xPQtsSDZVsxNUU-LPsaKgNpE3v2PUdfcWXSQNz2cUy7ezuZGIY_pQ-rK6g"/>
@@ -141,11 +141,34 @@
 <img alt="Sound Waveform" class="absolute inset-0 w-full h-full object-cover opacity-20 group-hover:scale-105 transition-transform duration-700" data-alt="Digital representation of complex sound waves in a deep gold and black color palette" src="https://lh3.googleusercontent.com/aida-public/AB6AXuD_yOyEHAqoqoSOsFJRdkCota4NP43vUPCQxaYEkwGC-Y7n3Z1FQVpnP1b0dOxtJIbuLRpSTfF6mjnafXKcuF3AQo5mk6-8xaqQzcxM5xFx-B17hncrwJrBIJ-ShdFs8Ky4Qup3dOLt2xrod8AOIgUkJkGqHLkJm9Rn1bnjJ8q8Rw6tCVj9-BPuqhmXYkzpkE37J-WTcxLHjp13Pk-9sQiPZlT54VjXCjgmNtUkRFKTD-q3HcYLULWv4hI4hsOMI_DCmD1X5H-oaG0"/>
 </div>
 </div>
+<!-- v2 Demo Preview Section -->
+<div class="space-y-6 rounded-2xl border border-primary/20 bg-surface-container-low/60 p-6">
+<div class="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+<div>
+<span class="inline-flex w-fit items-center rounded-full border border-primary/30 px-3 py-1 text-[10px] font-label uppercase tracking-widest text-primary">Coming in v2</span>
+<h2 class="mt-4 text-3xl font-headline font-bold text-on-surface">Preview the night before it exists</h2>
+<p class="mt-2 text-sm text-on-surface-variant">OpenRouter video powers the personalized class demo; music and voice remain demo previews.</p>
+</div>
+</div>
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-3">
+<button class="v2-demo-btn rounded-lg bg-primary px-4 py-4 text-xs font-bold uppercase tracking-widest text-on-primary transition hover:opacity-90" data-demo-kind="music" type="button">
+Generate music preview
+</button>
+<button class="v2-demo-btn rounded-lg border border-primary/50 px-4 py-4 text-xs font-bold uppercase tracking-widest text-primary transition hover:bg-primary/10" data-demo-kind="video" type="button">
+Watch party simulation
+</button>
+<button class="v2-demo-btn rounded-lg border border-outline-variant px-4 py-4 text-xs font-bold uppercase tracking-widest text-on-surface-variant transition hover:border-primary hover:text-primary" data-demo-kind="voice" type="button">
+Hear DJ voice intro
+</button>
+</div>
+<p id="v2DemoStatus" class="hidden text-xs text-error"></p>
+<div id="v2DemoOutput" class="hidden space-y-4"></div>
+</div>
 <!-- Promo Asset Vault (Bento Grid Style) -->
 <div class="space-y-8">
 <div class="flex justify-between items-end">
 <h2 class="text-3xl font-headline font-bold text-on-surface">Promo Asset Vault</h2>
-<span class="font-label text-xs tracking-widest text-primary-container uppercase mb-1">Higgsfield Assets</span>
+<span class="font-label text-xs tracking-widest text-primary-container uppercase mb-1">Video Assets</span>
 </div>
 <div class="grid grid-cols-2 md:grid-cols-3 gap-4">
 <div class="aspect-square bg-surface-container-highest rounded-lg overflow-hidden group relative">
@@ -257,6 +280,7 @@
 <script>
 const API = '';
 const djId = new URLSearchParams(location.search).get('dj') || 'aelxis-vox';
+let demoVenueId = null;
 
 // Fix nav links
 document.querySelectorAll('nav a').forEach(a => {
@@ -265,6 +289,93 @@ document.querySelectorAll('nav a').forEach(a => {
   else if (t === 'Vibe Search') a.href = '/search.html';
   else if (t === 'Profile') a.href = '/vibe-search.html';
 });
+
+async function loadDemoVenue() {
+  try {
+    const response = await fetch(`${API}/api/venues`);
+    if (!response.ok) return;
+    const venues = await response.json();
+    demoVenueId = venues[0]?.id || null;
+  } catch {
+    demoVenueId = null;
+  }
+}
+
+function setDemoStatus(message, isError = false) {
+  const statusEl = document.getElementById('v2DemoStatus');
+  if (!statusEl) return;
+  statusEl.textContent = message;
+  statusEl.classList.toggle('hidden', !message);
+  statusEl.classList.toggle('text-error', isError);
+  statusEl.classList.toggle('text-on-surface-variant', !isError);
+}
+
+function renderDemoAsset(kind, data) {
+  const output = document.getElementById('v2DemoOutput');
+  if (!output) return;
+
+  output.classList.remove('hidden');
+  if (kind === 'video') {
+    output.innerHTML = `
+      <video class="w-full rounded-xl border border-outline-variant/30 bg-black" controls playsinline src="${data.video_url}"></video>
+      <p class="text-xs text-on-surface-variant">${data.note}</p>
+    `;
+    return;
+  }
+
+  const label = kind === 'music' ? 'Suno music preview' : 'ElevenLabs DJ voice intro';
+  const url = data.audio_url;
+  output.innerHTML = `
+    <div class="rounded-xl border border-outline-variant/30 bg-surface-container-lowest p-4">
+      <p class="mb-3 text-[10px] uppercase tracking-widest text-primary">${label}</p>
+      <audio class="w-full" controls src="${url}"></audio>
+      <p class="mt-3 text-xs text-on-surface-variant">${data.note}</p>
+    </div>
+  `;
+}
+
+async function runV2Demo(kind) {
+  const endpoints = {
+    music: '/api/ai/music-preview',
+    video: '/api/ai/party-simulation-video',
+    voice: '/api/ai/dj-voice-intro'
+  };
+  const needsVenue = kind === 'music' || kind === 'video';
+  if (needsVenue && !demoVenueId) {
+    await loadDemoVenue();
+  }
+  if (needsVenue && !demoVenueId) {
+    setDemoStatus('No venue is available for this demo preview.', true);
+    return;
+  }
+
+  setDemoStatus('Preparing demo asset...');
+  const body = needsVenue ? { dj_id: djId, venue_id: demoVenueId } : { dj_id: djId };
+
+  try {
+    const response = await fetch(`${API}${endpoints[kind]}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    });
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({}));
+      setDemoStatus(err.detail || 'Could not load demo asset.', true);
+      return;
+    }
+    const data = await response.json();
+    setDemoStatus('');
+    renderDemoAsset(kind, data);
+  } catch {
+    setDemoStatus('Network error while loading demo asset.', true);
+  }
+}
+
+document.querySelectorAll('.v2-demo-btn').forEach(button => {
+  button.addEventListener('click', () => runV2Demo(button.dataset.demoKind));
+});
+
+loadDemoVenue();
 
 // Load DJ profile
 fetch(`${API}/api/djs/${djId}`)

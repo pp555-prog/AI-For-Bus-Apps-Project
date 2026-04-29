@@ -189,6 +189,25 @@
                             Your payment is held in escrow and released only after the performance. Secure, encrypted transaction guaranteed by NOCTURNE.
                         </p>
 </div>
+<!-- Booking Status Controls -->
+<div id="bookingStatusSection" class="hidden bg-surface-container-low/80 border border-outline-variant/40 rounded-xl p-5 space-y-4">
+<div class="flex items-center justify-between gap-4">
+<div>
+<p class="text-[10px] uppercase tracking-widest text-on-surface-variant">Booking Status</p>
+<p id="bookingStatusLabel" class="font-serif text-3xl text-primary mt-1">Pending</p>
+</div>
+<span id="bookingStatusIcon" class="material-symbols-outlined text-primary text-3xl" style="font-variation-settings: 'FILL' 1;">pending_actions</span>
+</div>
+<p id="bookingStatusError" class="hidden text-xs text-error leading-relaxed"></p>
+<div id="bookingStatusActions" class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+<button id="confirmBookingBtn" class="py-4 rounded-lg bg-primary text-on-primary font-bold tracking-[0.16em] text-xs uppercase hover:scale-[1.01] active:scale-[0.98] transition-all duration-300" type="button">
+Confirm booking
+</button>
+<button id="cancelBookingBtn" class="py-4 rounded-lg border border-error/70 text-error font-bold tracking-[0.16em] text-xs uppercase hover:bg-error/10 active:scale-[0.98] transition-all duration-300" type="button">
+Cancel booking
+</button>
+</div>
+</div>
 <!-- Full Width CTA -->
 <button class="w-full py-6 rounded-lg bg-gradient-to-r from-primary to-primary-container text-on-primary font-bold tracking-[0.2em] text-sm hover:scale-[1.01] active:scale-[0.98] transition-all duration-300 shadow-xl shadow-primary/10">
                         SEND OFFER
@@ -231,7 +250,17 @@
 </footer>
 <script>
 const API = '';
-const djId = new URLSearchParams(location.search).get('dj') || 'lumina-pulse';
+const params = new URLSearchParams(location.search);
+const bookingId = params.get('id');
+let djId = params.get('dj') || 'lumina-pulse';
+
+const statusSection = document.getElementById('bookingStatusSection');
+const statusLabel = document.getElementById('bookingStatusLabel');
+const statusIcon = document.getElementById('bookingStatusIcon');
+const statusError = document.getElementById('bookingStatusError');
+const statusActions = document.getElementById('bookingStatusActions');
+const confirmBookingBtn = document.getElementById('confirmBookingBtn');
+const cancelBookingBtn = document.getElementById('cancelBookingBtn');
 
 // Fix nav links
 document.querySelectorAll('nav a').forEach(a => {
@@ -241,11 +270,60 @@ document.querySelectorAll('nav a').forEach(a => {
   else if (t === 'Profile') a.href = '/vibe-search.html';
 });
 
-// Load DJ info for the artist preview
-fetch(`${API}/api/djs/${djId}`)
-  .then(r => r.json())
-  .then(dj => {
-    // Update artist preview at bottom
+function formatStatus(status) {
+  return (status || 'pending').replace(/^\w/, c => c.toUpperCase());
+}
+
+function showStatusError(message) {
+  if (!statusError) return;
+  statusError.textContent = message;
+  statusError.classList.remove('hidden');
+}
+
+function clearStatusError() {
+  if (!statusError) return;
+  statusError.textContent = '';
+  statusError.classList.add('hidden');
+}
+
+function updateStatusControls(booking) {
+  if (!statusSection || !statusLabel || !confirmBookingBtn || !cancelBookingBtn) return;
+
+  const status = booking.status || 'pending';
+  statusSection.classList.remove('hidden');
+  statusLabel.textContent = formatStatus(status);
+
+  const iconByStatus = {
+    pending: 'pending_actions',
+    confirmed: 'event_available',
+    cancelled: 'event_busy'
+  };
+  if (statusIcon) statusIcon.textContent = iconByStatus[status] || 'pending_actions';
+
+  if (statusActions) statusActions.classList.toggle('hidden', status === 'cancelled');
+  confirmBookingBtn.disabled = status === 'confirmed';
+  cancelBookingBtn.disabled = status === 'cancelled';
+  confirmBookingBtn.classList.toggle('opacity-40', confirmBookingBtn.disabled);
+  confirmBookingBtn.classList.toggle('cursor-not-allowed', confirmBookingBtn.disabled);
+  cancelBookingBtn.classList.toggle('opacity-40', cancelBookingBtn.disabled);
+  cancelBookingBtn.classList.toggle('cursor-not-allowed', cancelBookingBtn.disabled);
+
+  const dateInput = document.querySelector('input[type="date"]');
+  const timeInput = document.querySelector('input[type="time"]');
+  const setSelect = document.querySelector('select');
+  const feeInput = document.querySelector('.font-serif.text-6xl, .font-serif.text-7xl');
+  if (dateInput && booking.date) dateInput.value = booking.date;
+  if (timeInput && booking.start_time) timeInput.value = booking.start_time;
+  if (setSelect && booking.set_length) setSelect.value = booking.set_length;
+  if (feeInput && booking.offered_fee) feeInput.value = booking.offered_fee.toLocaleString();
+}
+
+async function loadDj(djToLoad) {
+  try {
+    const response = await fetch(`${API}/api/djs/${djToLoad}`);
+    if (!response.ok) return;
+    const dj = await response.json();
+
     const nameEl = document.querySelector('.font-serif.text-xl');
     if (nameEl) nameEl.textContent = dj.name;
 
@@ -255,15 +333,80 @@ fetch(`${API}/api/djs/${djId}`)
     const previewImg = document.querySelector('.w-16.h-16 img');
     if (previewImg && dj.image_url) previewImg.src = dj.image_url;
 
-    // Set default fee
     const feeInput = document.querySelector('.font-serif.text-6xl, .font-serif.text-7xl');
-    if (feeInput && dj.fee_from) feeInput.value = dj.fee_from.toLocaleString();
+    if (!bookingId && feeInput && dj.fee_from) feeInput.value = dj.fee_from.toLocaleString();
 
-    // Update page title
     const h1 = document.querySelector('h1');
-    if (h1) h1.textContent = `Book ${dj.name}`;
-  })
-  .catch(() => {});
+    if (h1) h1.textContent = bookingId ? `Booking for ${dj.name}` : `Book ${dj.name}`;
+  } catch {}
+}
+
+async function loadBooking() {
+  if (!bookingId) return;
+
+  try {
+    const response = await fetch(`${API}/api/bookings/${bookingId}`);
+    if (!response.ok) {
+      showStatusError(`Could not load booking #${bookingId}.`);
+      return;
+    }
+    const booking = await response.json();
+    djId = booking.dj_id || djId;
+    updateStatusControls(booking);
+    await loadDj(djId);
+  } catch {
+    showStatusError('Network error while loading booking status.');
+  }
+}
+
+async function patchBookingStatus(action) {
+  if (!bookingId) return;
+  clearStatusError();
+
+  const button = action === 'confirm' ? confirmBookingBtn : cancelBookingBtn;
+  const originalText = button?.textContent;
+  let updated = false;
+  if (button) {
+    button.disabled = true;
+    button.textContent = action === 'confirm' ? 'Confirming...' : 'Cancelling...';
+  }
+
+  try {
+    const response = await fetch(`${API}/api/bookings/${bookingId}/${action}`, {
+      method: 'PATCH'
+    });
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({}));
+      showStatusError(err.detail || `Could not ${action} booking.`);
+      return;
+    }
+    const booking = await response.json();
+    updateStatusControls(booking);
+    updated = true;
+  } catch {
+    showStatusError(`Network error while trying to ${action} booking.`);
+  } finally {
+    if (button) {
+      button.textContent = originalText;
+      if (!updated) button.disabled = false;
+    }
+  }
+}
+
+if (confirmBookingBtn) {
+  confirmBookingBtn.addEventListener('click', () => patchBookingStatus('confirm'));
+}
+
+if (cancelBookingBtn) {
+  cancelBookingBtn.addEventListener('click', () => patchBookingStatus('cancel'));
+}
+
+if (bookingId) {
+  loadBooking();
+} else {
+  // Load DJ info for the artist preview
+  loadDj(djId);
+}
 
 // Handle form submission
 const form = document.querySelector('form');

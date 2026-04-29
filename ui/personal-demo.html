@@ -1,0 +1,465 @@
+<!DOCTYPE html>
+<html class="dark" lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>NOCTURNE Personal Demo</title>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif:wght@700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          colors: {
+            background: "#131313",
+            surface: "#1c1b1b",
+            panel: "#242322",
+            line: "#4d4635",
+            gold: "#f2ca50",
+            text: "#e5e2e1",
+            muted: "#d0c5af"
+          },
+          fontFamily: {
+            headline: ["Noto Serif", "serif"],
+            body: ["Inter", "sans-serif"]
+          }
+        }
+      }
+    };
+  </script>
+</head>
+<body class="min-h-screen bg-background text-text font-body">
+  <main class="mx-auto grid min-h-screen max-w-7xl grid-cols-1 gap-10 px-6 py-8 lg:grid-cols-[0.9fr_1.1fr] lg:px-10">
+    <section class="flex flex-col justify-between rounded-xl border border-line/50 bg-surface p-8">
+      <div>
+        <p class="text-xs font-bold uppercase tracking-[0.35em] text-gold">NOCTURNE live demo</p>
+        <h1 class="mt-5 font-headline text-5xl font-extrabold leading-tight md:text-6xl">Book yourself into the room.</h1>
+        <p class="mt-5 max-w-xl text-base leading-7 text-muted">
+          Upload performer photos, describe your DJ style, let NOCTURNE match you to a venue, then submit an OpenRouter video job showing you playing there.
+        </p>
+      </div>
+
+      <form id="demoForm" class="mt-10 space-y-5">
+        <label class="block">
+          <span class="mb-2 block text-xs font-bold uppercase tracking-widest text-muted">Performer name</span>
+          <input id="performerName" class="w-full rounded-lg border border-line bg-background px-4 py-3 text-text focus:border-gold focus:ring-gold" value="Pablo" />
+        </label>
+
+        <label class="block">
+          <span class="mb-2 block text-xs font-bold uppercase tracking-widest text-muted">Style</span>
+          <textarea id="performerStyle" class="h-32 w-full rounded-lg border border-line bg-background px-4 py-3 text-text focus:border-gold focus:ring-gold">melodic techno, cinematic house, warm late-night energy, premium club atmosphere</textarea>
+        </label>
+
+        <label class="block">
+          <span class="mb-2 block text-xs font-bold uppercase tracking-widest text-muted">Photos</span>
+          <input id="performerImages" type="file" accept="image/png,image/jpeg,image/webp" multiple class="block w-full rounded-lg border border-line bg-background px-4 py-3 text-sm text-muted file:mr-4 file:rounded-md file:border-0 file:bg-gold file:px-4 file:py-2 file:text-sm file:font-bold file:text-black" />
+        </label>
+
+        <label class="block">
+          <span class="mb-2 block text-xs font-bold uppercase tracking-widest text-muted">Track sample <span class="text-[10px] font-medium normal-case text-muted/80">(optional, first 30s used)</span></span>
+          <input id="performerAudio" type="file" accept="audio/*" class="block w-full rounded-lg border border-line bg-background px-4 py-3 text-sm text-muted file:mr-4 file:rounded-md file:border-0 file:bg-gold file:px-4 file:py-2 file:text-sm file:font-bold file:text-black" />
+          <span id="audioFileLabel" class="mt-2 block text-xs text-muted/80"></span>
+        </label>
+
+        <button class="w-full rounded-lg bg-gold px-5 py-4 text-sm font-extrabold uppercase tracking-widest text-black transition hover:opacity-90" type="submit">
+          Match me to venues
+        </button>
+      </form>
+
+      <p id="status" class="mt-5 hidden rounded-lg border border-line bg-background px-4 py-3 text-sm text-muted"></p>
+    </section>
+
+    <section class="space-y-6">
+      <div id="imagePreview" class="grid grid-cols-3 gap-3"></div>
+
+      <div id="audioAnalysisPanel" class="hidden rounded-xl border border-gold/40 bg-panel p-6">
+        <p class="text-xs font-bold uppercase tracking-[0.3em] text-gold">Heard in your track</p>
+        <h2 id="audioAnalysisSummary" class="mt-2 font-headline text-2xl font-bold leading-snug"></h2>
+        <dl id="audioAnalysisDetails" class="mt-4 grid grid-cols-2 gap-x-4 gap-y-2 text-sm"></dl>
+        <p id="audioInterpretation" class="mt-4 hidden text-sm leading-6 text-muted"></p>
+      </div>
+
+      <div class="rounded-xl border border-line/50 bg-surface p-6">
+        <div class="flex items-center justify-between gap-4">
+          <div>
+            <p class="text-xs font-bold uppercase tracking-[0.3em] text-gold">Venue match</p>
+            <h2 class="mt-2 font-headline text-3xl font-bold">Best rooms for your set</h2>
+          </div>
+          <span id="matchCount" class="text-sm text-muted"></span>
+        </div>
+        <div id="venueResults" class="mt-6 space-y-4"></div>
+      </div>
+
+      <div id="musicPanel" class="hidden rounded-xl border border-gold/40 bg-panel p-6">
+        <p class="text-xs font-bold uppercase tracking-[0.3em] text-gold">Generated venue track</p>
+        <h2 id="musicTitle" class="mt-2 font-headline text-3xl font-bold">Composing with Lyria 3</h2>
+        <p id="musicNote" class="mt-3 text-sm leading-6 text-muted"></p>
+        <p id="musicPrompt" class="mt-3 hidden rounded-lg border border-line/60 bg-background px-3 py-2 text-xs leading-5 text-muted"></p>
+        <div id="musicOutput" class="mt-5"></div>
+      </div>
+
+      <div id="videoPanel" class="hidden rounded-xl border border-gold/40 bg-panel p-6">
+        <p class="text-xs font-bold uppercase tracking-[0.3em] text-gold">Generated performance video</p>
+        <h2 id="videoTitle" class="mt-2 font-headline text-3xl font-bold">Waiting for OpenRouter</h2>
+        <p id="videoNote" class="mt-3 text-sm leading-6 text-muted"></p>
+        <div id="videoOutput" class="mt-5"></div>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    const API = "";
+    let imageDataUrls = [];
+    let audioDataUrl = null;
+    let selectedVenue = null;
+
+    const statusEl = document.getElementById("status");
+    const previewEl = document.getElementById("imagePreview");
+    const audioFileLabel = document.getElementById("audioFileLabel");
+    const audioAnalysisPanel = document.getElementById("audioAnalysisPanel");
+    const audioAnalysisSummary = document.getElementById("audioAnalysisSummary");
+    const audioAnalysisDetails = document.getElementById("audioAnalysisDetails");
+    const audioInterpretation = document.getElementById("audioInterpretation");
+    const venueResultsEl = document.getElementById("venueResults");
+    const matchCountEl = document.getElementById("matchCount");
+    const musicPanel = document.getElementById("musicPanel");
+    const musicTitle = document.getElementById("musicTitle");
+    const musicNote = document.getElementById("musicNote");
+    const musicPromptEl = document.getElementById("musicPrompt");
+    const musicOutput = document.getElementById("musicOutput");
+    const videoPanel = document.getElementById("videoPanel");
+    const videoTitle = document.getElementById("videoTitle");
+    const videoNote = document.getElementById("videoNote");
+    const videoOutput = document.getElementById("videoOutput");
+
+    function setStatus(message, isError = false) {
+      statusEl.textContent = message;
+      statusEl.classList.toggle("hidden", !message);
+      statusEl.classList.toggle("border-red-400", isError);
+      statusEl.classList.toggle("text-red-200", isError);
+    }
+
+    function readFileAsDataUrl(file) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+    }
+
+    function renderPreviews() {
+      previewEl.innerHTML = imageDataUrls.map((url, index) => `
+        <div class="aspect-square overflow-hidden rounded-lg border border-line bg-surface">
+          <img class="h-full w-full object-cover" src="${url}" alt="Uploaded performer reference ${index + 1}" />
+        </div>
+      `).join("");
+    }
+
+    document.getElementById("performerImages").addEventListener("change", async (event) => {
+      const files = Array.from(event.target.files || []).slice(0, 4);
+      imageDataUrls = await Promise.all(files.map(readFileAsDataUrl));
+      renderPreviews();
+    });
+
+    document.getElementById("performerAudio").addEventListener("change", async (event) => {
+      audioDataUrl = null;
+      const file = (event.target.files || [])[0];
+      if (!file) {
+        audioFileLabel.textContent = "";
+        return;
+      }
+      audioFileLabel.textContent = `Decoding ${file.name} (${(file.size/1024).toFixed(0)} KB)...`;
+      try {
+        audioDataUrl = await trimAudioTo30sMonoWav(file);
+        const sizeKb = Math.round((audioDataUrl.length * 3 / 4) / 1024);
+        audioFileLabel.textContent = `Trimmed to first 30s, 16 kHz mono (${sizeKb} KB).`;
+      } catch (err) {
+        audioFileLabel.textContent = `Could not decode that file: ${err.message || err}`;
+      }
+    });
+
+    async function trimAudioTo30sMonoWav(file) {
+      const arrayBuffer = await file.arrayBuffer();
+      const decodeCtx = new (window.AudioContext || window.webkitAudioContext)();
+      let decoded;
+      try {
+        decoded = await decodeCtx.decodeAudioData(arrayBuffer);
+      } finally {
+        if (decodeCtx.close) decodeCtx.close();
+      }
+
+      const targetSampleRate = 16000;
+      const targetSeconds = 30;
+      const sourceLengthSamples = Math.min(decoded.length, decoded.sampleRate * targetSeconds);
+      const renderedLength = Math.floor(sourceLengthSamples * targetSampleRate / decoded.sampleRate);
+
+      const offline = new OfflineAudioContext(1, renderedLength, targetSampleRate);
+      const slice = offline.createBuffer(decoded.numberOfChannels, sourceLengthSamples, decoded.sampleRate);
+      for (let ch = 0; ch < decoded.numberOfChannels; ch++) {
+        slice.getChannelData(ch).set(decoded.getChannelData(ch).slice(0, sourceLengthSamples));
+      }
+      const source = offline.createBufferSource();
+      source.buffer = slice;
+      source.connect(offline.destination);
+      source.start();
+      const rendered = await offline.startRendering();
+      const wavBlob = audioBufferToWavBlob(rendered);
+      return await readBlobAsDataUrl(wavBlob);
+    }
+
+    function audioBufferToWavBlob(buffer) {
+      const numChannels = buffer.numberOfChannels;
+      const sampleRate = buffer.sampleRate;
+      const byteLength = buffer.length * numChannels * 2 + 44;
+      const arr = new ArrayBuffer(byteLength);
+      const view = new DataView(arr);
+      const writeStr = (off, s) => { for (let i = 0; i < s.length; i++) view.setUint8(off + i, s.charCodeAt(i)); };
+
+      writeStr(0, "RIFF");
+      view.setUint32(4, byteLength - 8, true);
+      writeStr(8, "WAVE");
+      writeStr(12, "fmt ");
+      view.setUint32(16, 16, true);
+      view.setUint16(20, 1, true);
+      view.setUint16(22, numChannels, true);
+      view.setUint32(24, sampleRate, true);
+      view.setUint32(28, sampleRate * numChannels * 2, true);
+      view.setUint16(32, numChannels * 2, true);
+      view.setUint16(34, 16, true);
+      writeStr(36, "data");
+      view.setUint32(40, byteLength - 44, true);
+
+      let offset = 44;
+      for (let i = 0; i < buffer.length; i++) {
+        for (let ch = 0; ch < numChannels; ch++) {
+          const sample = Math.max(-1, Math.min(1, buffer.getChannelData(ch)[i]));
+          view.setInt16(offset, sample * 0x7FFF, true);
+          offset += 2;
+        }
+      }
+      return new Blob([arr], { type: "audio/wav" });
+    }
+
+    function readBlobAsDataUrl(blob) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = reject;
+        reader.readAsDataURL(blob);
+      });
+    }
+
+    function renderAudioAnalysis(analysis, interpretation) {
+      if (!analysis) {
+        audioAnalysisPanel.classList.add("hidden");
+        return;
+      }
+      audioAnalysisPanel.classList.remove("hidden");
+      if (analysis.error) {
+        audioAnalysisSummary.textContent = "Audio analysis failed";
+        audioAnalysisDetails.innerHTML = "";
+        audioInterpretation.textContent = analysis.error;
+        audioInterpretation.classList.remove("hidden");
+        return;
+      }
+      audioAnalysisSummary.textContent = analysis.summary || "Sonic identity captured.";
+      const rows = [];
+      const pushRow = (label, value) => {
+        if (value === undefined || value === null || value === "" || (Array.isArray(value) && value.length === 0)) return;
+        const text = Array.isArray(value) ? value.join(", ") : String(value);
+        rows.push(`<dt class="font-bold uppercase tracking-widest text-[10px] text-muted">${label}</dt><dd class="text-text">${text}</dd>`);
+      };
+      pushRow("Genres", analysis.genres);
+      pushRow("BPM", analysis.bpm_estimate);
+      pushRow("Energy", analysis.energy);
+      pushRow("Mood", analysis.mood);
+      pushRow("Production", analysis.production_notes);
+      pushRow("Venue signals", analysis.venue_signals);
+      audioAnalysisDetails.innerHTML = rows.join("");
+      if (interpretation) {
+        audioInterpretation.textContent = interpretation;
+        audioInterpretation.classList.remove("hidden");
+      } else {
+        audioInterpretation.classList.add("hidden");
+      }
+    }
+
+    function renderVenues(results) {
+      matchCountEl.textContent = `${results.length} matches`;
+      venueResultsEl.innerHTML = results.map((item, index) => `
+        <article class="rounded-lg border ${index === 0 ? "border-gold/70" : "border-line"} bg-background p-5">
+          <div class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+            <div>
+              <div class="flex items-center gap-3">
+                <h3 class="font-headline text-2xl font-bold">${item.venue.name}</h3>
+                <span class="rounded-full border border-gold/30 px-3 py-1 text-xs font-bold text-gold">${item.score}%</span>
+              </div>
+              <p class="mt-2 text-sm text-muted">${item.venue.city || ""} · ${item.venue.capacity || "?"} cap · ${(item.venue.vibe_tags || []).join(", ")}</p>
+              <p class="mt-3 text-sm leading-6 text-muted">${item.reasoning}</p>
+            </div>
+            <button class="generateVideo rounded-lg bg-gold px-5 py-3 text-xs font-extrabold uppercase tracking-widest text-black" data-venue="${item.venue.id}">
+              Generate video
+            </button>
+          </div>
+        </article>
+      `).join("");
+
+      document.querySelectorAll(".generateVideo").forEach(button => {
+        button.addEventListener("click", () => {
+          selectedVenue = button.dataset.venue;
+          generateMusic();
+          generateVideo();
+        });
+      });
+    }
+
+    async function generateMusic() {
+      const performerName = document.getElementById("performerName").value.trim();
+      const style = document.getElementById("performerStyle").value.trim();
+      if (!selectedVenue) return;
+
+      musicPanel.classList.remove("hidden");
+      musicTitle.textContent = "Composing with Lyria 3";
+      musicNote.textContent = "Lyria 3 generates a ~30s instrumental for the matched venue. Hang on while OpenRouter renders the clip.";
+      musicPromptEl.classList.add("hidden");
+      musicPromptEl.textContent = "";
+      musicOutput.innerHTML = "";
+
+      let response;
+      try {
+        response = await fetch(`${API}/api/ai/demo-music-preview`, {
+          method: "POST",
+          headers: {"Content-Type": "application/json"},
+          body: JSON.stringify({performer_name: performerName, style, venue_id: selectedVenue})
+        });
+      } catch (err) {
+        musicTitle.textContent = "Music request failed";
+        musicNote.textContent = err.message || "Network error reaching the music endpoint.";
+        return;
+      }
+      const data = await response.json();
+      if (!response.ok) {
+        musicTitle.textContent = "Music request failed";
+        musicNote.textContent = data.detail || "Lyria could not generate the clip.";
+        return;
+      }
+
+      musicTitle.textContent = data.generated ? "Lyria-generated venue track" : "Demo music asset";
+      musicNote.textContent = data.note || "";
+      if (data.prompt) {
+        musicPromptEl.textContent = "Prompt: " + data.prompt;
+        musicPromptEl.classList.remove("hidden");
+      }
+      const src = data.audio_url || data.audio_data_url;
+      if (src) {
+        musicOutput.innerHTML = `<audio class="w-full" controls preload="auto" src="${src}"></audio>`;
+      } else {
+        musicOutput.innerHTML = "";
+      }
+    }
+
+    document.getElementById("demoForm").addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const performerName = document.getElementById("performerName").value.trim();
+      const style = document.getElementById("performerStyle").value.trim();
+      if (!performerName || !style) {
+        setStatus("Add a performer name and style first.", true);
+        return;
+      }
+
+      setStatus(audioDataUrl
+        ? "Listening to your track and matching to NOCTURNE venues (this can take 10-20s)..."
+        : "Matching your performer profile to NOCTURNE venues...");
+      const body = {performer_name: performerName, style, image_data_urls: imageDataUrls};
+      if (audioDataUrl) body.audio_data_url = audioDataUrl;
+
+      let response;
+      try {
+        response = await fetch(`${API}/api/ai/demo-venue-match`, {
+          method: "POST",
+          headers: {"Content-Type": "application/json"},
+          body: JSON.stringify(body)
+        });
+      } catch (err) {
+        setStatus(err.message || "Network error reaching the match endpoint.", true);
+        return;
+      }
+      const data = await response.json();
+      if (!response.ok) {
+        setStatus(data.detail || "Could not match venues.", true);
+        return;
+      }
+      setStatus("");
+      renderAudioAnalysis(data.audio_analysis, data.interpretation);
+      renderVenues(data.results || []);
+    });
+
+    async function generateVideo() {
+      const performerName = document.getElementById("performerName").value.trim();
+      const style = document.getElementById("performerStyle").value.trim();
+      if (!selectedVenue) return;
+
+      videoPanel.classList.remove("hidden");
+      videoTitle.textContent = "Submitting OpenRouter video job";
+      videoNote.textContent = "This may take a few minutes. Keep this tab open while NOCTURNE polls the job.";
+      videoOutput.innerHTML = "";
+
+      const response = await fetch(`${API}/api/ai/demo-performance-video`, {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({performer_name: performerName, style, venue_id: selectedVenue, image_data_urls: imageDataUrls})
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        videoTitle.textContent = "Video request failed";
+        videoNote.textContent = data.detail || "OpenRouter could not start the video job.";
+        return;
+      }
+      if (data.video_url && !data.job_id) {
+        renderVideo(data);
+        return;
+      }
+      pollVideo(data.job_id);
+    }
+
+    async function pollVideo(jobId) {
+      if (!jobId) {
+        videoTitle.textContent = "No job id returned";
+        return;
+      }
+
+      for (let i = 0; i < 40; i++) {
+        videoTitle.textContent = `Generating video: poll ${i + 1}`;
+        await new Promise(resolve => setTimeout(resolve, 10000));
+        const response = await fetch(`${API}/api/ai/demo-performance-video/${jobId}`);
+        const data = await response.json();
+        if (!response.ok) {
+          videoTitle.textContent = "Polling failed";
+          videoNote.textContent = data.detail || "Could not poll OpenRouter video status.";
+          return;
+        }
+        if (data.status === "completed" && data.video_url) {
+          renderVideo(data);
+          return;
+        }
+        if (data.status === "failed") {
+          videoTitle.textContent = "Video generation failed";
+          videoNote.textContent = data.note || "OpenRouter marked the job failed.";
+          return;
+        }
+        videoNote.textContent = `OpenRouter status: ${data.status}`;
+      }
+      videoTitle.textContent = "Still generating";
+      videoNote.textContent = "The job is still running. Refresh the API docs or retry polling with the job id.";
+    }
+
+    function renderVideo(data) {
+      videoTitle.textContent = "Your venue simulation is ready";
+      videoNote.textContent = data.note || "Generated by OpenRouter video.";
+      videoOutput.innerHTML = `<video class="w-full rounded-xl border border-line bg-black" controls playsinline src="${data.video_url}"></video>`;
+    }
+  </script>
+</body>
+</html>
