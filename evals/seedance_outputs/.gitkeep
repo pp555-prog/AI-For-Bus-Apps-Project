@@ -1,0 +1,3 @@
+# Output directory for the §9.6 Seedance Video Output eval.
+# evals/seedance_video_eval.py writes <venue_id>.mp4 here after each
+# successful Seedance generation. Files themselves are gitignored.

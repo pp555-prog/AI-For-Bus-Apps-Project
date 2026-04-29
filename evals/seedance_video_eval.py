@@ -1,0 +1,316 @@
+"""
+NOCTURNE AI Evaluation — Seedance Video Output (SPEC §9.6).
+
+Validates that the handbook-structured prompt + venue conditioning actually
+produces good-looking video, not just a prompt that passes the §9.5 linter.
+
+The §9.5 eval is a deterministic linter on the prompt text.
+THIS eval (§9.6) is the expensive companion: it actually generates videos
+through OpenRouter and asks a human rater to score them against the
+handbook's principles.
+
+Workflow:
+    1. Backend running (python run.py) and OPENROUTER_API_KEY funded.
+    2. Drop performer photos somewhere on disk (1-3 JPG/PNG/WEBP files).
+    3. Run:
+         python evals/seedance_video_eval.py \
+             --photos path/to/photo1.jpg path/to/photo2.jpg \
+             --venues berghain-berlin the-nest amnesia-ibiza
+       (default --venues = first 3 seeded venues; cost = N × ~$1.51)
+    4. Eval submits one Seedance job per venue, polls each to completion,
+       downloads the MP4s into evals/seedance_outputs/<venue_id>.mp4, and
+       writes:
+         - seedance_video_results_full.csv (job ids, prompt sent, status)
+         - seedance_video_rate_me.csv (one row per video; YOU fill in
+           the rubric columns 1-5 after watching each clip)
+    5. Watch each MP4 in evals/seedance_outputs/ and rate it on the
+       handbook rubric in the rate-me CSV.
+    6. Run evals/seedance_video_compute_metrics.py to produce the headline
+       report.
+
+Rubric (handbook-aligned, all 1-5 unless noted):
+    - identity_preservation: does the DJ look like the performer photos? (handbook p.9 Image Reference role)
+    - venue_fidelity: does the venue look like the venue reference? (handbook p.4 principle 4: environment is active)
+    - action_clarity: is there ONE clear readable action? (handbook p.4 principle 1)
+    - camera_coherence: is the camera move coherent and singular? (handbook p.4 principle 2)
+    - behavioral_realism: does the DJ's behavior look physically grounded? (handbook p.4 principle 3)
+    - constraints_violated_yn: any text/logos/captions/celebrity drift? (yes/no — yes is bad)
+"""
+from __future__ import annotations
+
+import argparse
+import base64
+import csv
+import os
+import pathlib
+import sys
+import time
+from pathlib import Path
+
+import httpx
+
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+EVALS_DIR = Path(__file__).resolve().parent
+OUTPUT_DIR = EVALS_DIR / "seedance_outputs"
+RESULTS_FULL = EVALS_DIR / "seedance_video_results_full.csv"
+RATE_ME = EVALS_DIR / "seedance_video_rate_me.csv"
+
+DEFAULT_API = "http://localhost:8000"
+POLL_INTERVAL = 15  # seconds
+MAX_POLLS = 30      # 7.5 min ceiling per video
+COST_PER_CLIP = 1.51  # USD, Seedance 2.0 720p/10s
+
+
+def read_openrouter_key() -> str | None:
+    """Pull OPENROUTER_API_KEY from .env (not from the runtime env, since
+    the user's shell may not have it loaded). Used to authenticate the
+    OpenRouter content URL when downloading the rendered video."""
+    env_path = PROJECT_ROOT / ".env"
+    if not env_path.exists():
+        return None
+    for line in env_path.read_text(encoding="utf-8").splitlines():
+        if line.startswith("OPENROUTER_API_KEY"):
+            return line.split("=", 1)[1].strip().strip('"').strip("'") or None
+    return None
+
+
+def encode_image(path: Path) -> str:
+    ext = path.suffix.lower().lstrip(".")
+    mime_map = {"jpg": "jpeg", "jpeg": "jpeg", "png": "png", "webp": "webp"}
+    mime = mime_map.get(ext, "jpeg")
+    if not path.exists():
+        raise FileNotFoundError(path)
+    b64 = base64.b64encode(path.read_bytes()).decode()
+    return f"data:image/{mime};base64,{b64}"
+
+
+def fetch_venues(client: httpx.Client, api: str) -> list[dict]:
+    r = client.get(f"{api}/api/venues", timeout=30)
+    r.raise_for_status()
+    return r.json()
+
+
+def submit_video(client: httpx.Client, api: str, body: dict) -> dict:
+    r = client.post(f"{api}/api/ai/demo-performance-video", json=body, timeout=60)
+    r.raise_for_status()
+    return r.json()
+
+
+def poll_video(client: httpx.Client, api: str, job_id: str) -> dict:
+    r = client.get(f"{api}/api/ai/demo-performance-video/{job_id}", timeout=30)
+    r.raise_for_status()
+    return r.json()
+
+
+def download_video(url: str, dest: Path, openrouter_key: str | None) -> None:
+    headers = {}
+    if "openrouter.ai" in url and openrouter_key:
+        headers["Authorization"] = f"Bearer {openrouter_key}"
+    with httpx.Client(timeout=180, follow_redirects=True) as c:
+        r = c.get(url, headers=headers)
+        r.raise_for_status()
+        dest.write_bytes(r.content)
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(description="Seedance video output eval (SPEC §9.6)")
+    parser.add_argument("--photos", nargs="+", required=True,
+                        help="Paths to performer photos (1-3 JPG/PNG/WEBP)")
+    parser.add_argument("--venues", nargs="+", default=None,
+                        help="Venue IDs to test (default: first 3 seeded venues)")
+    parser.add_argument("--style", default="melodic techno, cinematic late-night energy",
+                        help="Performer style description")
+    parser.add_argument("--performer-name", default="Pablo")
+    parser.add_argument("--api", default=DEFAULT_API)
+    parser.add_argument("--yes", action="store_true",
+                        help="Skip the cost-confirmation prompt")
+    args = parser.parse_args()
+
+    photo_paths = [Path(p) for p in args.photos][:3]
+    for p in photo_paths:
+        if not p.exists():
+            print(f"ERROR: photo not found: {p}", file=sys.stderr)
+            return 1
+
+    OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+
+    openrouter_key = read_openrouter_key()
+    if not openrouter_key:
+        print("WARNING: OPENROUTER_API_KEY not found in .env — video downloads will likely fail.")
+
+    with httpx.Client() as client:
+        # Health check + venue fetch
+        try:
+            all_venues = fetch_venues(client, args.api)
+        except Exception as e:
+            print(f"ERROR: backend unreachable at {args.api}: {e}", file=sys.stderr)
+            return 1
+
+        venues_by_id = {v["id"]: v for v in all_venues}
+        if args.venues:
+            missing = [vid for vid in args.venues if vid not in venues_by_id]
+            if missing:
+                print(f"ERROR: unknown venue IDs: {missing}", file=sys.stderr)
+                return 1
+            venues = [venues_by_id[vid] for vid in args.venues]
+        else:
+            venues = all_venues[:3]
+
+        # Cost confirmation
+        n = len(venues)
+        cost = n * COST_PER_CLIP
+        print(f"\nWill submit {n} Seedance video jobs.")
+        print(f"  Performer: {args.performer_name}; style: {args.style!r}")
+        print(f"  Photos: {[p.name for p in photo_paths]}")
+        print(f"  Venues: {[v['id'] for v in venues]}")
+        print(f"  Estimated cost: ${cost:.2f} (${COST_PER_CLIP:.2f} × {n})")
+        if not args.yes:
+            confirm = input("Proceed? [y/N]: ").strip().lower()
+            if confirm != "y":
+                print("Aborted.")
+                return 0
+
+        # Encode photos once
+        try:
+            photo_data_urls = [encode_image(p) for p in photo_paths]
+        except FileNotFoundError as e:
+            print(f"ERROR: {e}", file=sys.stderr)
+            return 1
+
+        full_rows: list[dict] = []
+        rate_rows: list[dict] = []
+        pair_id = 0
+
+        for v in venues:
+            pair_id += 1
+            vid = v["id"]
+            vname = v.get("name", vid)
+            print(f"\n[{vname}] submitting Seedance job...")
+            try:
+                submit_resp = submit_video(client, args.api, {
+                    "performer_name": args.performer_name,
+                    "style": args.style,
+                    "venue_id": vid,
+                    "image_data_urls": photo_data_urls,
+                })
+            except Exception as e:
+                print(f"  ERROR submitting: {e}")
+                full_rows.append({
+                    "pair_id": pair_id, "venue_id": vid, "venue_name": vname,
+                    "status": "submit_failed", "error": str(e),
+                    "job_id": "", "video_path": "",
+                })
+                continue
+
+            job_id = submit_resp.get("job_id") or ""
+            print(f"  job_id={job_id}, polling every {POLL_INTERVAL}s (max {MAX_POLLS} polls)...")
+
+            final: dict | None = None
+            t0 = time.time()
+            for i in range(MAX_POLLS):
+                time.sleep(POLL_INTERVAL)
+                try:
+                    status_resp = poll_video(client, args.api, job_id)
+                except Exception as e:
+                    print(f"  poll {i+1}: ERROR {e}")
+                    continue
+                status = status_resp.get("status")
+                elapsed = time.time() - t0
+                print(f"  poll {i+1} t={elapsed:.0f}s: status={status}")
+                if status in ("completed", "failed", "error"):
+                    final = status_resp
+                    break
+
+            if not final:
+                print("  TIMED OUT")
+                full_rows.append({
+                    "pair_id": pair_id, "venue_id": vid, "venue_name": vname,
+                    "status": "timeout", "error": "polling timed out",
+                    "job_id": job_id, "video_path": "",
+                })
+                continue
+
+            if final.get("status") != "completed":
+                err = final.get("note") or final.get("status")
+                print(f"  ENDED with status={final.get('status')}: {err}")
+                full_rows.append({
+                    "pair_id": pair_id, "venue_id": vid, "venue_name": vname,
+                    "status": final.get("status", "unknown"),
+                    "error": str(err),
+                    "job_id": job_id, "video_path": "",
+                })
+                continue
+
+            video_url = final.get("video_url") or ""
+            if not video_url:
+                full_rows.append({
+                    "pair_id": pair_id, "venue_id": vid, "venue_name": vname,
+                    "status": "no_video_url", "error": "completed but no video_url",
+                    "job_id": job_id, "video_path": "",
+                })
+                continue
+
+            dest = OUTPUT_DIR / f"{vid}.mp4"
+            try:
+                download_video(video_url, dest, openrouter_key)
+                size_kb = dest.stat().st_size // 1024
+                print(f"  downloaded -> {dest} ({size_kb} KB)")
+            except Exception as e:
+                print(f"  download failed: {e}")
+                full_rows.append({
+                    "pair_id": pair_id, "venue_id": vid, "venue_name": vname,
+                    "status": "download_failed", "error": str(e),
+                    "job_id": job_id, "video_path": "",
+                })
+                continue
+
+            full_rows.append({
+                "pair_id": pair_id, "venue_id": vid, "venue_name": vname,
+                "status": "completed", "error": "",
+                "job_id": job_id, "video_path": str(dest.relative_to(PROJECT_ROOT)),
+            })
+            rate_rows.append({
+                "pair_id": pair_id,
+                "venue_id": vid,
+                "venue_name": vname,
+                "video_file": dest.name,
+                "identity_preservation": "",
+                "venue_fidelity": "",
+                "action_clarity": "",
+                "camera_coherence": "",
+                "behavioral_realism": "",
+                "constraints_violated_yn": "",
+            })
+
+    # Write CSVs
+    if full_rows:
+        with open(RESULTS_FULL, "w", newline="", encoding="utf-8") as f:
+            w = csv.DictWriter(f, fieldnames=list(full_rows[0].keys()))
+            w.writeheader()
+            w.writerows(full_rows)
+    if rate_rows:
+        with open(RATE_ME, "w", newline="", encoding="utf-8") as f:
+            w = csv.DictWriter(f, fieldnames=list(rate_rows[0].keys()))
+            w.writeheader()
+            w.writerows(rate_rows)
+
+    completed = sum(1 for r in full_rows if r["status"] == "completed")
+    print(f"\nDone. {completed}/{len(full_rows)} videos completed and downloaded.")
+    print(f"  Videos:        {OUTPUT_DIR}/")
+    print(f"  Full results:  {RESULTS_FULL}")
+    print(f"  Rate me here:  {RATE_ME}")
+    print("\nNEXT STEPS:")
+    print(f"  1. Watch each MP4 in {OUTPUT_DIR.relative_to(PROJECT_ROOT)}/")
+    print(f"  2. Open {RATE_ME.name} and fill in the rubric columns:")
+    print("       identity_preservation     1-5 (1=different person, 5=clearly the same)")
+    print("       venue_fidelity            1-5 (1=generic club, 5=clearly the same room as the venue ref)")
+    print("       action_clarity            1-5 (1=chaotic/multiple actions, 5=single dominant action)")
+    print("       camera_coherence          1-5 (1=erratic/multiple moves, 5=single smooth move)")
+    print("       behavioral_realism        1-5 (1=AI-uncanny/wrong hands, 5=natural physical performance)")
+    print("       constraints_violated_yn   yes/no (text, logos, captions, celebrity drift?)")
+    print(f"  3. Run: python evals/seedance_video_compute_metrics.py")
+    return 0 if completed == len(full_rows) and full_rows else 1
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

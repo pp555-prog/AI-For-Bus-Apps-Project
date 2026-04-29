@@ -240,3 +240,90 @@ Writes a markdown report to `evals/seedance_prompt_metrics.md`.
 |---|---|
 | `seedance_prompt_eval.py` | The linter; renders prompts and runs the 15 checks per venue |
 | `seedance_prompt_metrics.md` | (generated) per-venue + summary report |
+
+---
+
+# Seedance Video Output eval (SPEC §9.6)
+
+The §9.5 linter validates the prompt **text**. This eval (§9.6) validates
+the actual **video output** Seedance produces, by running real generations
+against OpenRouter and scoring the resulting MP4s on a handbook-derived
+rubric. The pair answers two related questions:
+
+- §9.5: does the prompt follow the Seedance 2.0 AI Handbook's structure? (cheap, deterministic)
+- §9.6: does that structure actually translate to good-looking video? (expensive, subjective)
+
+## Design
+
+For N chosen venues:
+1. Submit one Seedance job per venue with: the venue's `image_url` as
+   `input_references[0]` (Environment Sheet) and 1-3 of your performer
+   photos as `input_references[1+]` (Identity Sheet).
+2. Poll each job to completion (~140 s each).
+3. Download the rendered MP4 to `evals/seedance_outputs/<venue_id>.mp4`.
+4. Watch each clip and score it 1-5 on five handbook-aligned dimensions
+   plus a yes/no constraints check.
+5. Compute composite score + pass rate.
+
+Single-rater protocol matching SPEC §9.3 / §9.4. N=3 venues fits inside a
+$10 OpenRouter top-up; default is `--venues = first 3 seeded venues`.
+Cost: N × ~$1.51 (Seedance 2.0 720p / 10 s).
+
+## Rubric (handbook-aligned)
+
+| Dimension | What you're rating (1-5) | Handbook reference |
+|---|---|---|
+| `identity_preservation` | Does the DJ in the video look like your performer photos? | p.9 — Image Reference role: "identity, wardrobe, palette" |
+| `venue_fidelity` | Does the venue in the video match the seeded `image_url`? | p.5 principle 4 — "environment is active, not wallpaper" |
+| `action_clarity` | Is there ONE clear, readable action throughout? | p.4 principle 1 — "one shot = one dominant readable action" |
+| `camera_coherence` | Is the camera move coherent and singular (not erratic)? | p.4 principle 2 — "camera is not decoration" |
+| `behavioral_realism` | Does the DJ's behavior look physically grounded (not AI-uncanny)? | p.4 principle 3 — "action must be physical" |
+| `constraints_violated_yn` | Any text overlays, logos, captions, celebrity drift? | p.16 — constraint vocabulary; p.14 anti-pattern |
+
+Targets:
+- **Composite Score** (mean of the five 1-5 dimensions) ≥ 4.0 / 5.0
+- **Pass Rate** (composite ≥ 4.0 AND constraints not violated) ≥ 70%
+
+## Running
+
+### Stage 1 — generate the videos
+
+```bash
+# Backend running (python run.py) and OPENROUTER_API_KEY funded.
+# Drop performer photos somewhere on disk, then:
+python evals/seedance_video_eval.py \
+    --photos path/to/photo1.jpg path/to/photo2.jpg \
+    --venues berghain-berlin the-nest amnesia-ibiza
+```
+
+The eval prints the cost estimate and asks for confirmation before
+submitting jobs (use `--yes` to skip the prompt). Each job takes ~140 s
+to render; the eval polls every 15 s up to 7.5 min per video.
+
+### Stage 2 — rate the videos
+
+Open `evals/seedance_video_rate_me.csv` in your spreadsheet tool. For
+each row, watch the corresponding MP4 in `evals/seedance_outputs/` and
+fill in the six rubric columns. Save the file as CSV.
+
+### Stage 3 — compute metrics
+
+```bash
+python evals/seedance_video_compute_metrics.py
+```
+
+Writes `evals/seedance_video_metrics.md` with the headline composite +
+pass-rate, per-dimension averages (each cross-referenced to the handbook
+page), per-venue results, and failure-mode candidates. Paste the headline
+into SPEC §9.6.
+
+## Files (Seedance video eval)
+
+| File | Purpose |
+|---|---|
+| `seedance_video_eval.py` | Stage 1 runner: submits + polls + downloads videos |
+| `seedance_video_compute_metrics.py` | Stage 3 metrics (rubric → composite + pass rate) |
+| `seedance_outputs/` | Rendered MP4s (gitignored — large files; .gitkeep ships) |
+| `seedance_video_results_full.csv` | (generated) per-job submit/poll/download status + prompt + cost |
+| `seedance_video_rate_me.csv` | (generated) blank rubric sheet |
+| `seedance_video_metrics.md` | (generated) headline rubric report |

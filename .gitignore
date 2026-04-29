@@ -43,11 +43,18 @@ output/
 # Audio-driven match eval — actual audio files (third-party content, not redistributed)
 evals/audio_samples/*
 !evals/audio_samples/.gitkeep
-# Generated eval outputs
+# Generated audio eval outputs
 evals/audio_results_full.csv
 evals/audio_rate_me.csv
 evals/audio_analyses.json
 evals/audio_metrics.md
+
+# Seedance video output eval — generated MP4s (large) + per-run CSVs
+evals/seedance_outputs/*
+!evals/seedance_outputs/.gitkeep
+evals/seedance_video_results_full.csv
+evals/seedance_video_rate_me.csv
+evals/seedance_video_metrics.md
 
 # OS
 .DS_Store

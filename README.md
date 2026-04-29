@@ -90,7 +90,10 @@ AI-For-Bus-Apps-Project/
 |   |-- audio_match_eval.py   # §9.4 audio-driven match eval (paired T vs T+A)
 |   |-- audio_compute_metrics.py # §9.4 lift metrics report
 |   |-- audio_samples/        # Per-venue audio clips for §9.4 (gitignored)
-|   `-- seedance_prompt_eval.py # §9.5 Seedance prompt-structure linter (handbook-based)
+|   |-- seedance_prompt_eval.py # §9.5 Seedance prompt-structure linter (handbook-based)
+|   |-- seedance_video_eval.py # §9.6 Seedance video output eval (real generations)
+|   |-- seedance_video_compute_metrics.py # §9.6 rubric metrics
+|   `-- seedance_outputs/     # Generated MP4s for §9.6 (gitignored)
 |-- n8n/
 |   `-- workflows/booking_confirmation.json  # n8n workflow JSON; import into n8n Cloud
 |-- AGENTS.md                 # Universal AI agent onboarding; READ FIRST

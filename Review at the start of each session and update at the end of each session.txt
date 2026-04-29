@@ -2291,6 +2291,133 @@ WHAT COMES NEXT
    work for the user (sourcing 2-3 photos per venue) plus a small schema
    migration.
 
+--------------------------------------------------------------------------------
+SESSION 27 — Seedance Video Output Eval Harness (SPEC §9.6)
+Date:    2026-04-29
+Agent:   Claude Opus 4.7
+--------------------------------------------------------------------------------
+
+CONTEXT
+-------
+The §9.5 prompt-structure linter from SESSION 26 validates the prompt
+TEXT but says nothing about whether the resulting video looks good. The
+user observed that we should "run the eval by uploading images" — i.e.
+actually generate videos with real performer photos and rate the output.
+This session built the §9.6 video-output eval harness as the expensive
+companion to the §9.5 linter.
+
+WHAT WAS DONE
+-------------
+1. evals/seedance_video_eval.py — Stage 1 runner. CLI takes performer
+   photo paths + a list of venue IDs (default: first 3 seeded venues).
+   For each venue: encodes photos to data URLs, calls
+   /api/ai/demo-performance-video with the seeded venue image_url +
+   performer photos, polls every 15s up to 7.5 min, downloads the
+   rendered MP4 to evals/seedance_outputs/<venue_id>.mp4 (with the
+   OpenRouter Bearer key from .env to authenticate the content URL),
+   writes seedance_video_results_full.csv (per-job status + path) and
+   seedance_video_rate_me.csv (blank rubric columns). Prints a cost
+   estimate and asks for confirmation before submitting.
+
+2. evals/seedance_video_compute_metrics.py — Stage 3 metrics. Reads
+   the filled-in rubric CSV, computes:
+   - Per-dimension averages (1-5) across all rated videos.
+   - Composite = mean of the five 1-5 dimensions.
+   - Pass rate = fraction of videos with composite ≥ 4.0 AND constraints
+     not violated.
+   - Per-venue results table.
+   - Failure-mode candidates (composite < 3.0 or constraints violated).
+   Each per-dimension row in the report cross-references the handbook
+   page that motivates it. Targets: composite ≥ 4.0, pass rate ≥ 70%.
+
+3. Rubric (handbook-aligned, 1-5 unless noted):
+   - identity_preservation — handbook p.9 (Image Reference role: identity)
+   - venue_fidelity — handbook p.5 principle 4 (environment is active)
+   - action_clarity — handbook p.4 principle 1 (one dominant readable action)
+   - camera_coherence — handbook p.4 principle 2 (camera serves story)
+   - behavioral_realism — handbook p.4 principle 3 (action must be physical)
+   - constraints_violated_yn — yes/no, p.16 + p.14 anti-patterns
+
+4. Output directory: evals/seedance_outputs/ with .gitkeep. The MP4s
+   themselves are gitignored (large, regeneratable). The four generated
+   per-run files (results CSV, rate-me CSV, metrics MD) are also
+   gitignored so the harness can run without polluting the repo.
+
+5. Doc sync:
+   - SPEC.docx §9.6 placeholder paragraph describing the eval, rubric,
+     targets, cost.
+   - evals/README.md gets a long "Seedance Video Output eval (SPEC §9.6)"
+     section with the rubric table cross-referenced to handbook page
+     numbers, the 3-stage protocol, and run instructions.
+   - TASKS.md adds the §9.6 entry under v1-Live with current status
+     ("eval runs are pending photo upload + human rating").
+   - AGENTS.md Key Files now lists both new eval scripts.
+   - README.md project tree adds the new files + seedance_outputs/.
+   - .gitignore patterns for evals/seedance_outputs/* and the four
+     generated per-run files.
+
+FILES CHANGED
+-------------
+- evals/seedance_video_eval.py (new)
+- evals/seedance_video_compute_metrics.py (new)
+- evals/seedance_outputs/.gitkeep (new)
+- evals/README.md (new §9.6 section)
+- SPEC.docx §9.6 placeholder paragraph
+- TASKS.md (§9.6 entry)
+- AGENTS.md (Key Files)
+- README.md (project tree)
+- .gitignore (eval output patterns)
+
+KEY DECISIONS
+-------------
+- §9.5 stays as the cheap deterministic prompt-structure linter; §9.6
+  becomes its expensive output-quality companion. Both reference the
+  same handbook so a future agent improving the prompt has both a fast
+  feedback loop (linter) and a slow-but-real validation (rubric).
+- Default to N=3 venues (~$4.50 per full eval run) so it fits inside
+  the existing $8.45 OpenRouter balance with room for retries. User
+  can pass --venues with all 7 IDs if they want to top up first.
+- Cost-confirmation prompt before submitting jobs. Reason: each Seedance
+  run is real money; a typo in --venues shouldn't burn $10.
+- Eval reads OPENROUTER_API_KEY from .env directly (not from process
+  env) to download the rendered video from OpenRouter's content URL,
+  which requires Bearer auth. Same pattern as the smoke-test scripts.
+- Single-rater protocol matching SPEC §9.3 / §9.4. Reason: consistency
+  with the existing eval discipline.
+- Rubric is 5 numeric dimensions + 1 yes/no constraints flag, NOT a
+  full-blown ranked panel. Reason: keeps the human's job to ~5 minutes
+  per video and produces a clean composite number for the SPEC table.
+
+WHAT WAS TESTED
+---------------
+- ast.parse on both new scripts: OK.
+- The harness has not been run end-to-end. Requires:
+  (a) backend running with OPENROUTER_API_KEY funded (~$5+ buffer)
+  (b) 1-3 performer photos on disk
+  (c) ~7-10 minutes of wall-clock per Seedance run
+
+WHAT WAS NOT TESTED
+-------------------
+- A full live run end-to-end. The user will exercise this themselves
+  with real photos.
+- Whether Seedance's content moderation rejects any specific venue
+  prompt. The first audio-on smoke test in SESSION 24 hit the safety
+  filter; with generate_audio: false (current default) we don't expect
+  the same trigger, but other safety categories are possible.
+
+WHAT COMES NEXT
+---------------
+1. User curates 1-3 performer photos and runs:
+     python evals/seedance_video_eval.py \\
+       --photos path/to/p1.jpg path/to/p2.jpg \\
+       --venues berghain-berlin the-nest amnesia-ibiza
+2. Watches the resulting MP4s in evals/seedance_outputs/ and rates
+   each on the 6-column rubric in seedance_video_rate_me.csv.
+3. Runs evals/seedance_video_compute_metrics.py and pastes the headline
+   composite + pass-rate into SPEC §9.6.
+4. If any dimension averages low, iterate on backend/services/seedance_prompt.py
+   (the §9.5 linter will continue to gate structural changes).
+
 ================================================================================
 END OF LOG
 ================================================================================
