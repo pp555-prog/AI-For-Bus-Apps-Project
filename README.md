@@ -16,8 +16,8 @@ The platform is designed to reduce the friction of booking the right DJ for the 
 - **AI Promo Prompts** — generates promo-content prompts tailored to a DJ's brand and a venue's vibe
 - **Party Simulation Text** — produces descriptive scene text used to seed downstream video tools
 - **Audio-driven Venue Match** — performers can upload a track on `/personal-demo.html`; an audio-input LLM (`google/gemini-2.5-flash` via OpenRouter) listens to the first 30s and returns a structured style read (genres, BPM, energy, mood, venue archetypes) that augments the typed style for venue matching
-- **AI Music Previews** — Google Lyria 3 generates a ~30s instrumental clip tailored to the matched venue + performer style (routed through OpenRouter; `google/lyria-3-clip-preview`, ~$0.04 per clip)
-- **Personalized video previews** — OpenRouter video generation submits an async reference-video job from uploaded performer photos for the class demo (`bytedance/seedance-2.0`, 720p, 10s)
+- **AI Music Previews** — Google Lyria 3 generates a ~30s instrumental clip tailored to the matched venue + performer style (routed through OpenRouter; `google/lyria-3-clip-preview`; preview pricing currently $0/call, expected ~$0.04/clip when GA)
+- **Personalized video previews** — OpenRouter video generation submits an async reference-video job from uploaded performer photos for the class demo (`bytedance/seedance-2.0`, 720p, 10 s, silent — `generate_audio: false`; the Lyria clip plays as the soundtrack alongside the silent video)
 - **Booking Confirmation Emails** — n8n workflow sends templated emails to both DJ and venue when a booking inquiry is submitted
 - **Marketplace UI** — Clean, intuitive interface built with Stitch (Tailwind CSS)
 
@@ -30,12 +30,12 @@ The platform is designed to reduce the friction of booking the right DJ for the 
 |----------------|-------|---------|
 | [Stitch](https://stitch.withgoogle.com) | v1 — live | Frontend UI / marketplace interface (Tailwind CSS) |
 | [FastAPI](https://fastapi.tiangolo.com) | v1 — live | Python backend API |
-| [OpenRouter](https://openrouter.ai) | **v1 — live** | Single-key router for the LLM behind vibe matching, bio generation, promo prompts, and party simulation text. Active model is set by `OPENROUTER_MODEL` (default: `openai/gpt-oss-120b:free`) and can be swapped to Claude, Gemini, DeepSeek, etc. without code changes. |
+| [OpenRouter](https://openrouter.ai) | **v1 — live** | Single-key router for every AI call: the LLM (vibe matching, bio generation, promo prompts, party simulation text, venue match reasoning — `OPENROUTER_MODEL`, default `openai/gpt-oss-120b:free`), the audio-input analyzer for the personalized demo (`OPENROUTER_AUDIO_MODEL`, default `google/gemini-2.5-flash`), the music generator (Lyria, separate row below), and the video generator (Seedance, separate row below). Each is swappable via env var without code changes. |
 | SQLite | v1 — live | Lightweight database for MVP |
 | [n8n](https://n8n.io) | **v1 — live** | Workflow automation — booking confirmation emails (DJ + venue) on every booking inquiry |
 | [OpenAI Codex](https://platform.openai.com/docs/guides/code) | dev tool | AI-assisted code generation used during development; not a runtime feature |
-| [Google Lyria 3](https://openrouter.ai/google/lyria-3-clip-preview) | **v1 — live** | AI music generation (instrumental clips) routed through OpenRouter; default model `google/lyria-3-clip-preview` |
-| [OpenRouter Video](https://openrouter.ai/docs/guides/overview/multimodal/video-generation) | **v1 — live** (class demo) | Async AI video generation for personalized party simulations; default model `bytedance/seedance-2.0` |
+| [Google Lyria 3](https://openrouter.ai/google/lyria-3-clip-preview) | **v1 — live** | AI music generation (instrumental clips) routed through OpenRouter; default model `google/lyria-3-clip-preview`. Requires `modalities: ["text","audio"]` + `stream: true` to return audio. |
+| [OpenRouter Video](https://openrouter.ai/docs/guides/overview/multimodal/video-generation) | **v1 — live** (class demo) | Async AI video generation for personalized party simulations; default model `bytedance/seedance-2.0`, 720p / 10 s, silent (`generate_audio: false`). Observed wall-clock ~140 s per clip. |
 | [ElevenLabs](https://elevenlabs.io) | v2 | Voice synthesis for DJ intros, narration, voice matching |
 
 ## How It Works
@@ -80,8 +80,17 @@ AI-For-Bus-Apps-Project/
 |   |-- discovery.html        # Home; editorial DJ grid + live radar + venue showcase
 |   |-- search.html           # Vibe search; AI filter sidebar + DJ result cards
 |   |-- vibe-search.html      # DJ profile; bio, promo vault, tech rider, calendar
-|   |-- personal-demo.html    # Personalized class demo: photo upload, venue match, video job
-|   `-- booking.html          # Booking offer form with escrow CTA
+|   |-- personal-demo.html    # Personalized class demo: photo + audio upload, venue match, Lyria + Seedance
+|   |-- booking.html          # Booking offer form with escrow CTA
+|   `-- assets/v2/            # Static fallback MP3/MP4 served when OPENROUTER_API_KEY is missing
+|-- evals/                    # Eval harnesses for SPEC §9
+|   |-- run_eval.py           # §9.3 DJ-match eval (text-only LLM matcher)
+|   |-- compute_metrics.py    # §9.3 metrics report
+|   |-- audio_match_eval.py   # §9.4 audio-driven match eval (paired T vs T+A)
+|   |-- audio_compute_metrics.py # §9.4 lift metrics report
+|   `-- audio_samples/        # Per-venue audio clips for §9.4 (gitignored)
+|-- n8n/
+|   `-- workflows/booking_confirmation.json  # n8n workflow JSON; import into n8n Cloud
 |-- AGENTS.md                 # Universal AI agent onboarding; READ FIRST
 |-- CLAUDE.md                 # Claude-specific notes (defers to AGENTS.md)
 |-- Review at the start of each session and update at the end of each session.txt

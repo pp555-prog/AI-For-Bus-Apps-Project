@@ -78,13 +78,15 @@ External AI (all routed through the single OpenRouter key):
 | `README.md` | User-facing project intro | When public-facing description changes |
 | `AGENTS.md` (this file) | Universal agent onboarding | Rarely; only when onboarding rules change |
 | `CLAUDE.md` | Claude-specific notes (defers to AGENTS.md) | Rarely |
-| `backend/routers/ai.py` | LLM-powered endpoints (vibe-match, bio, promo, party-sim) and personalized demo video endpoints | When adding/changing AI features |
+| `backend/routers/ai.py` | LLM-powered endpoints (vibe-match, bio, promo, party-sim) plus the personalized demo endpoints (`demo-venue-match`, `demo-music-preview`, `demo-performance-video` + polling) | When adding/changing AI features |
 | `backend/services/llm_client.py` | LLM wrapper — OpenAI SDK pointed at OpenRouter | When changing model selection or retry logic |
 | `backend/services/openrouter_video_client.py` | OpenRouter async video client (Seedance 2.0 default) | When changing video model or async polling |
 | `backend/services/lyria_client.py` | OpenRouter Lyria 3 music client | When changing music model or response parsing |
 | `backend/services/audio_analyzer.py` | OpenRouter audio-input client; sends uploaded clips to Gemini for structured style analysis | When changing the audio model or output schema |
 | `backend/services/vibe_matcher.py` | Core matching engine | When changing the match algorithm or prompt |
 | `backend/seed.py` | Sample data generator | When test data needs to change |
+| `evals/run_eval.py` + `compute_metrics.py` | DJ-match eval harness (SPEC §9.3) | When prompt/scoring changes warrant a re-run |
+| `evals/audio_match_eval.py` + `audio_compute_metrics.py` | Audio-driven match eval (SPEC §9.4) — paired T vs T+A on `/api/ai/demo-venue-match` with one audio clip per seeded venue | When the audio analyzer or venue matcher changes; results go in SPEC §9.4 |
 | `init.sh` | First-time setup script | Rarely |
 | `run.py` | Launches uvicorn on port 8000 | Rarely |
 
@@ -125,7 +127,9 @@ This is graded against a rubric (see `NBA_6925_4920_S26_Project_Presentation.pdf
 - **JSON-typed columns** (genres, vibe_keywords, tech_rider, availability) are stored as TEXT and parsed by Pydantic `@field_validator` on read. Don't normalize them into separate tables.
 - **Static UI mount comes after API routers** in `main.py`, so `/api/*` always wins.
 - **The personalized class demo (`/personal-demo.html`) is the canonical demo path** — venue match → Lyria 3 music clip → Seedance 2.0 video. All three calls share one OpenRouter API key. Don't reintroduce Suno, fal.ai, or Higgsfield as runtime providers.
-- **Video and music generation cost real money** — Seedance 2.0 720p/10s ≈ $1.51/clip, Lyria 3 clip ≈ $0.04/clip. Don't fire either against a live API in code paths that aren't user-triggered.
+- **Video generation costs real money** — Seedance 2.0 720p/10s ≈ $1.51/clip and ~140 s wall-clock per call. Lyria 3 is currently in preview and OpenRouter has been billing $0/call (published price ~$0.04/clip when GA). Don't fire Seedance against a live API in code paths that aren't user-triggered.
+- **Seedance is generated silent** — `openrouter_video_client.py` sends `generate_audio: false`. ByteDance's safety filter rejects jobs with audio enabled (~$1.50 wasted, ~2 min lost on stage). Lyria supplies the soundtrack alongside the silent video.
+- **Lyria requires streaming + modalities** — to receive audio (not just a `<instrumental>Caption: ...` text), the request must include `modalities: ["text","audio"]` and `stream: true`. Audio comes as one large `delta.audio.data` SSE chunk; parse via `aiter_bytes()` and split on `\n\n`, not `aiter_lines()`.
 
 ---
 

@@ -36,6 +36,19 @@ output/
 # Codex local artifacts (docx renders, smoke-test scratch)
 .codex_*
 
+# Smoke-test artifacts (Lyria + Seedance + video job snapshots)
+.lyria_smoke_*
+.seedance_smoke_*
+
+# Audio-driven match eval — actual audio files (third-party content, not redistributed)
+evals/audio_samples/*
+!evals/audio_samples/.gitkeep
+# Generated eval outputs
+evals/audio_results_full.csv
+evals/audio_rate_me.csv
+evals/audio_analyses.json
+evals/audio_metrics.md
+
 # OS
 .DS_Store
 Thumbs.db

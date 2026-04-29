@@ -1863,6 +1863,296 @@ WHAT COMES NEXT
 3. If live video succeeds, use this personalized flow as the main class demo
    script.
 
+--------------------------------------------------------------------------------
+SESSION 24 — Audio-driven Demo Match + Lyria/Seedance Smoke Tests + Doc Sync
+Date:    2026-04-29
+Agent:   Claude Opus 4.7
+--------------------------------------------------------------------------------
+
+CONTEXT
+-------
+Two threads of work in one session.
+
+(1) User asked the personalized class demo to also accept an uploaded music
+    file as a venue-matching signal — not just performer photos and typed
+    style. They confirmed three defaults: augment (concatenate the AI-derived
+    style with the typed style), use the LLM venue matcher (the deterministic
+    keyword scorer is fallback only), cap audio to 30 seconds.
+
+(2) After the audio-input flow was wired, OpenRouter credits were topped up
+    ($10) and the full pipeline was smoke-tested live: Gemini audio analysis,
+    Lyria 3 music generation, and Seedance 2.0 video with a data-URL image
+    reference. Findings drove two code fixes and a doc-consistency pass.
+
+WHAT WAS DONE
+-------------
+1. Audio-driven venue matching:
+   - New backend/services/audio_analyzer.py — sends the uploaded clip to
+     OpenRouter chat-completions with input_audio content blocks (default
+     google/gemini-2.5-flash). Returns structured JSON: summary, genres,
+     bpm_estimate, energy, mood, production_notes, venue_signals, plus a
+     condensed style_phrase for downstream prompts.
+   - vibe_matcher.py: added match_venues(style_description, venues) that
+     mirrors match_djs but ranks venues with reasoning (uses OPENROUTER_MODEL).
+   - models.py: DemoVenueMatchRequest gained audio_data_url; response gained
+     interpretation, audio_analysis, combined_style, matcher.
+   - routers/ai.py: /api/ai/demo-venue-match rewritten to call audio_analyzer
+     when audio is supplied, augment the typed style, and call the LLM
+     matcher. Deterministic keyword scorer is the last-resort fallback.
+   - ui/personal-demo.html: new audio file input; client-side audio decode
+     via OfflineAudioContext; trim to 30s mono 16 kHz WAV; encode to data
+     URL; new "Heard in your track" panel renders the model's read.
+   - config.py + .env.example: OPENROUTER_AUDIO_MODEL added.
+
+2. OpenRouter Lyria + Seedance smoke tests (after $10 credit top-up):
+   - Audio analysis: Gemini 2.5 Flash returned valid JSON in 2.4s on a
+     synthetic 3s rhythmic test WAV. <$0.01.
+   - Lyria first attempt (chat-completions, no streaming, no modalities):
+     HTTP 200 in 11s but returned only a <instrumental>Caption: ... text
+     description; no audio data anywhere. Cost: $0.
+   - Lyria second attempt (modalities=["text","audio"], audio={format:"wav"},
+     stream=true): SSE returned 5 chunks; the audio came as a single ~1MB
+     delta.audio.data base64 chunk. Decoded to a 745KB MP3 (~199 kbps,
+     ~30s). Lyria returns ID3 (MP3) regardless of the requested wav format.
+     Cost: $0 (preview pricing).
+   - Seedance first attempt (10s, 720p, generate_audio=true, data-URL ref):
+     HTTP 202 accepted. After 137s of polling the job FAILED with "The
+     output audio may contain sensitive information" — ByteDance's safety
+     filter. Charged ~$0.04 for the partial run.
+   - Seedance second attempt (same payload, generate_audio=false): HTTP 202
+     accepted; status=completed at 140s; downloaded a 3.3MB silent MP4.
+     Cost: $1.51.
+
+3. Code fixes from smoke-test findings:
+   - openrouter_video_client.py: generate_audio toggled True -> False.
+     ByteDance's safety filter rejects audio-on jobs and burns ~$1.50 +
+     ~2 min per failed attempt. Lyria already supplies the music, so the
+     demo plays silent video + Lyria audio in parallel.
+   - lyria_client.py: full rewrite. Now uses streaming (httpx.stream) with
+     modalities=["text","audio"] and audio={format:"wav"}. Switched from
+     aiter_lines() to aiter_bytes() with manual SSE parsing because httpx
+     line iterators fragment Lyria's single ~1MB SSE event awkwardly.
+     Detects format from magic bytes and returns a properly-typed data URL.
+
+4. Doc consistency pass (this is the "make sure all project docs are
+   consistent" pass, after the smoke-test fixes settled the ground truth):
+   - SPEC.docx §8 integration table: OpenRouter Video tag flipped from
+     [v2 demo] (no color) to [v1 — LIVE] (green #16A34A) to match every
+     other doc that calls it v1 LIVE. Lyria description softened from
+     "$0.04 per clip" to "preview pricing currently $0/call, ~$0.04/clip
+     when GA". OpenRouter Video description amended to mention silent
+     generation, ~140s wall-clock, and the safety-filter rationale. Stray
+     em-dash from the earlier f-string substitution removed.
+   - README.md: Lyria pricing softened; Seedance silent + 140s timing
+     called out; Tech Stack table notes Lyria's streaming requirement.
+   - AGENTS.md: routers/ai.py description now lists the demo endpoints;
+     conventions split into separate bullets on Seedance-silent and
+     Lyria-streaming with rationale.
+   - CLAUDE.md: bullets added on the Lyria streaming requirement and the
+     Seedance audio safety filter (so a future agent doesn't regress).
+   - TASKS.md: pricing wording softened; Lyria streaming + Seedance silent
+     + ~140s wall-clock recorded; UI video player marked done for the
+     personalized demo.
+   - evals/README.md: "Claude-powered" -> "OpenRouter-routed"; references
+     to "Claude's predictions / outputs / top-1" neutralized to "the
+     matcher's"; new naming note explains the historical claude_* CSV
+     column names.
+   - .gitignore: added .lyria_smoke_*, .seedance_smoke_* patterns for
+     local smoke-test artifacts.
+
+5. Earlier in the session (pre-smoke-test):
+   - Single snapshot commit f82d29c on main: bundled SESSIONS 3-23 of
+     uncommitted Codex work plus the Lyria 3 + audio-driven changes from
+     the start of this session. 38 files, +4818/-262.
+   - .gitignore additions for .claude/, .codex_*, *.db-journal/wal/shm.
+
+FILES CHANGED (post-commit f82d29c)
+-----------------------------------
+- backend/services/lyria_client.py (full rewrite for streaming)
+- backend/services/openrouter_video_client.py (generate_audio: false)
+- README.md (Lyria pricing softened, Seedance silent/timing called out)
+- AGENTS.md (key files + conventions updates)
+- CLAUDE.md (Lyria streaming + Seedance safety filter notes)
+- TASKS.md (pricing/silent/timing updates)
+- SPEC.docx (integration table tag flip + description amends)
+- evals/README.md (Claude -> matcher + naming note)
+- .gitignore (smoke-test artifact patterns)
+
+KEY DECISIONS
+-------------
+- Augment, don't replace, the typed style with the audio-derived style.
+  Reason: keep the user's intent visible and additive; never have the
+  audio analysis silently override what the user wrote. The combined
+  string is what the LLM matcher sees.
+- LLM matching for the personalized demo, deterministic scorer as
+  fallback. Reason: the keyword scorer can't reason about an audio-
+  derived style, and "live LLM matching with reasoning" is a stronger
+  demo beat.
+- 30-second client-side audio cap (OfflineAudioContext + manual WAV
+  encode). Reason: cost control + model context limits + avoids
+  server-side ffmpeg/pydub.
+- Seedance generate_audio: false. Reason: ByteDance's safety filter
+  rejects audio-on jobs (~$1.50 wasted, ~2 min lost per failed attempt).
+  Lyria supplies the music; silent video + parallel Lyria audio is the
+  cleaner architecture and a more honest demo story.
+
+WHAT WAS TESTED
+---------------
+- All four legs of the demo verified live against the OpenRouter API
+  with funded credits ($10 starting balance):
+  * Gemini 2.5 Flash audio analysis: HTTP 200, 2.4s, valid JSON in
+    NOCTURNE's expected schema.
+  * Lyria 3 clip: HTTP 200, ~9s, 745KB MP3.
+  * Seedance 2.0 video: HTTP 202 + completed at 140s, 3.3MB MP4.
+  * Data URLs ARE accepted in Seedance's input_references — the open
+    question is closed; the frontend's base64 path stays.
+- Total smoke-test spend: $1.55. Remaining: $8.45.
+
+WHAT WAS NOT TESTED
+-------------------
+- /personal-demo.html browser flow end-to-end (each individual call
+  verified independently; integration not exercised).
+- Demo-day timing under network jitter (140s is a single observation).
+- Audio-driven match against a real DJ track (smoke test used a
+  synthetic rhythmic test tone).
+
+WHAT COMES NEXT
+---------------
+1. Browser smoke test of /personal-demo.html with one real photo and
+   one real ~30s audio clip. Verify the four AI calls fire end-to-end
+   and that the Lyria clip + Seedance video render correctly.
+2. Decide demo-day fallback: pre-bake a hero run (lower risk) or talk
+   through the pipeline while it renders (~3 min of audience wait).
+3. Optional: add a (venue_id, style_hash) cache for Lyria if rehearsals
+   churn through credits faster than expected.
+4. Commit this session's post-snapshot changes; consider pushing to
+   origin/main before the demo for backup.
+
+--------------------------------------------------------------------------------
+SESSION 25 — Audio-Driven Match Eval Harness (SPEC §9.4)
+Date:    2026-04-29
+Agent:   Claude Opus 4.7
+--------------------------------------------------------------------------------
+
+CONTEXT
+-------
+After the smoke tests in SESSION 24 confirmed the audio→match→Lyria→Seedance
+pipeline works end-to-end, the user observed that the new audio-input flow
+deserves its own eval — the existing harness (SPEC §9.3) only tests the
+text-only DJ matcher, not the audio-augmented venue matcher on
+/api/ai/demo-venue-match. This session built the eval harness; the actual
+eval run waits on audio sample collection.
+
+WHAT WAS DONE
+-------------
+1. Designed the eval as a paired T vs T+A comparison:
+   - T (control): /api/ai/demo-venue-match called with a neutral typed style
+     ("experienced electronic music DJ, all-genre") and no audio.
+   - T+A (treatment): same neutral style PLUS one ~30s audio clip per venue.
+     Backend's audio_analyzer (Gemini 2.5 Flash via OpenRouter) augments
+     the style; vibe_matcher.match_venues ranks venues with reasoning.
+   The control has no audio so any lift is attributable to the audio signal.
+   The neutral typed style was chosen to push T toward random performance,
+   making the audio's contribution visible as lift.
+
+2. Built evals/audio_match_eval.py (Stage 1 runner). Reads
+   evals/audio_samples/<venue_id>.{mp3,wav,m4a,flac,ogg}, calls the demo
+   endpoint twice per clip, writes:
+   - audio_results_full.csv (all matcher outputs)
+   - audio_rate_me.csv (blank human_rating column)
+   - audio_analyses.json (Gemini's structured reads, for inspection)
+
+3. Built evals/audio_compute_metrics.py (Stage 3). Computes top-1 accuracy
+   per condition (with random baseline = 1/7 ≈ 14.3% for 7 venues),
+   Match Precision (avg human rating across top-3 picks, per condition),
+   and the lift of T+A over T on each metric. Writes audio_metrics.md
+   with a headline T-vs-T+A table, per-clip top-1 picks, per-rank
+   averages, and failure-mode candidates.
+
+4. Updated evals/README.md with the full §9.4 protocol: the per-venue
+   sourcing table (which genre/BPM each clip should target for the seven
+   seeded venues), three sourcing options (public DJ mixes / Pablo's own
+   tracks / Lyria-generated as backup), the rating protocol (single rater
+   per existing convention), and the run instructions.
+
+5. Created evals/audio_samples/ with a .gitkeep documenting the expected
+   filenames. Audio files themselves are gitignored (third-party content,
+   not redistributed). The four generated eval outputs (audio_results_full
+   .csv, audio_rate_me.csv, audio_analyses.json, audio_metrics.md) are
+   also gitignored so the harness can run without polluting the repo.
+
+6. Added SPEC.docx §9.4 "Audio-Driven Match Eval (Personalized Demo)"
+   placeholder paragraph between §9.3 and §10. Describes the protocol
+   and notes that headline numbers will be filled in once the audio
+   samples are collected and rated.
+
+7. Doc consistency follow-up:
+   - README.md Tech Stack: OpenRouter row updated to mention all four
+     model roles (LLM, audio-input analyzer, music, video) so the table
+     accurately reflects the single-key architecture.
+   - AGENTS.md Key Files: added evals/run_eval.py + compute_metrics.py
+     (existing harness) and evals/audio_match_eval.py +
+     audio_compute_metrics.py (new harness).
+   - TASKS.md: added "Audio-match eval harness (SPEC §9.4)" entry under
+     v1-Live.
+
+FILES CHANGED
+-------------
+- evals/audio_match_eval.py (new)
+- evals/audio_compute_metrics.py (new)
+- evals/README.md (new "Audio-Driven Venue Match eval" section, sourcing
+  table, run instructions; existing §9.3 section retained as-is)
+- evals/audio_samples/.gitkeep (new)
+- SPEC.docx (§9.4 placeholder paragraph added)
+- README.md (OpenRouter Tech Stack row mentions all four model roles)
+- AGENTS.md (eval harness paths added to Key Files)
+- TASKS.md (audio-match eval harness task added)
+- .gitignore (evals/audio_samples/* + four generated outputs)
+
+KEY DECISIONS
+-------------
+- Paired T vs T+A on the SAME 7 audio clips, not separate test sets.
+  Reason: paired comparison isolates the audio signal cleanly. Lift is
+  the headline number even though N=7 means we can't claim significance.
+- Neutral typed style ("experienced electronic music DJ, all-genre") in
+  both conditions. Reason: a generic baseline pushes T toward random,
+  letting T+A's audio-derived signal show up as visible lift.
+- Single-rater protocol (Pablo), matching the existing §9.3 eval. Reason:
+  consistency with the §9.3 eval already in the SPEC; recruiting a second
+  rater wasn't feasible in the demo prep timeline.
+- Audio sourcing left flexible (public DJ mixes / Pablo's own / Lyria
+  backup). Reason: avoid blocking on external content rights; document
+  whichever path is taken in §9.4 results.
+- Eval harness shipped without audio samples. Reason: separating
+  infrastructure from data collection; Pablo can curate clips on his
+  own time and re-run the harness at will. Audio files are gitignored
+  so this stays a personal step, not a repo dependency.
+
+WHAT WAS TESTED
+---------------
+- Python syntax of both eval scripts (ast.parse passes).
+- The harness has not been run end-to-end. Audio samples need to be
+  populated before the first run.
+
+WHAT WAS NOT TESTED
+-------------------
+- Actual eval run (no audio samples yet).
+- Whether Gemini's audio analysis on real DJ tracks produces stable
+  enough reads to drive consistent venue matching across the 7 clips.
+
+WHAT COMES NEXT
+---------------
+1. Pablo curates 7 ~30-second audio clips, one per venue, into
+   evals/audio_samples/ following the sourcing table in evals/README.md.
+2. Run evals/audio_match_eval.py with the backend up and OPENROUTER_API_KEY
+   set. Cost is trivial (~$0.10 in Gemini calls; LLM matcher is free).
+3. Rate audio_rate_me.csv blind to the matcher's score (~30 min).
+4. Run evals/audio_compute_metrics.py and paste the headline T-vs-T+A
+   table into SPEC §9.4.
+5. If lift is small or negative, iterate: tighten the audio_analyzer
+   system prompt or revisit the venue matcher's weighting of the
+   AI-derived style vs the typed style.
+
 ================================================================================
 END OF LOG
 ================================================================================

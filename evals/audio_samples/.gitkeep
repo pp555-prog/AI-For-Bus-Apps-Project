@@ -1,0 +1,13 @@
+# This directory is for the audio-driven match eval.
+# Drop one ~30-second clip per seeded venue here, named:
+#   berghain-berlin.mp3
+#   the-nest.mp3
+#   basement.mp3
+#   the-archive-ibiza.mp3
+#   fabric-london.mp3
+#   amnesia-ibiza.mp3
+#   printworks.mp3
+# (or .wav / .m4a / .flac / .ogg)
+#
+# Audio files themselves are gitignored — only this .gitkeep ships.
+# See evals/README.md "Audio-Driven Venue Match eval" for sourcing guidance.

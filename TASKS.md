@@ -20,8 +20,9 @@ These are working in the deployed product.
 - [x] **LLM promo prompts** — `POST /api/ai/promo-prompt` generates promo content prompts
 - [x] **LLM party-simulation text** — `POST /api/ai/party-simulation` produces scene descriptions
 - [x] **Audio-driven venue matching** — `POST /api/ai/demo-venue-match` accepts an optional uploaded audio clip; frontend trims to 30s mono 16 kHz WAV; OpenRouter `google/gemini-2.5-flash` returns a structured style read; the LLM venue matcher (`vibe_matcher.match_venues`) ranks venues with reasoning using the augmented style
-- [x] **Lyria 3 music previews** — `POST /api/ai/demo-music-preview` generates a ~30s instrumental clip per matched venue via OpenRouter (`google/lyria-3-clip-preview`, ~$0.04 per clip)
-- [x] **Personalized OpenRouter video** — `POST /api/ai/demo-performance-video` + polling endpoint generate a Seedance 2.0 reference-video from uploaded performer photos (default 720p/10s, ~$1.51 per clip)
+- [x] **Audio-match eval harness (SPEC §9.4)** — `evals/audio_match_eval.py` + `audio_compute_metrics.py` run a paired T vs T+A comparison on the demo-venue-match endpoint (one audio clip per seeded venue, neutral typed style as the control). Eval runs are pending audio sample collection
+- [x] **Lyria 3 music previews** — `POST /api/ai/demo-music-preview` generates a ~30s instrumental clip per matched venue via OpenRouter (`google/lyria-3-clip-preview`; preview pricing currently $0/call, published ~$0.04/clip when GA). Streaming + `modalities:["text","audio"]` required.
+- [x] **Personalized OpenRouter video** — `POST /api/ai/demo-performance-video` + polling endpoint generate a Seedance 2.0 reference-video from uploaded performer photos (default 720p/10s silent, `generate_audio: false`, ~$1.51 per clip, ~140 s wall-clock). The Lyria clip plays as the soundtrack alongside the silent video.
 - [x] **SQLite + auto-seed** — 10 DJs / 7 venues / 3 bookings seeded on first run
 
 ---
@@ -95,17 +96,17 @@ Documented in SPEC §8 with `[v2]` tags. Build only after v1 is complete.
 - [x] **UI: preview player** on the personalized demo (`/personal-demo.html`)
   fires automatically when the user picks a venue match.
 - [ ] **Caching** — Lyria clips are not cached; each match triggers a fresh
-  generation (~$0.04 per clip). Add a `(venue_id, style_hash)`-keyed cache if
-  cost or latency becomes an issue.
+  generation (preview pricing currently $0; ~$0.04 per clip when GA). Add a
+  `(venue_id, style_hash)`-keyed cache if cost or latency becomes an issue.
 
 ### OpenRouter Video — AI party simulation videos
 
 - [x] **Choose provider** based on output quality + API access (see SPEC OQ-3)
   - Selected OpenRouter Video to keep AI generation behind the existing OpenRouter account/key.
-- [x] **Video API integration** → `backend/services/openrouter_video_client.py`
+- [x] **Video API integration** → `backend/services/openrouter_video_client.py` (silent — `generate_audio: false`)
 - [x] **Endpoint** `POST /api/ai/demo-performance-video` — submits an async OpenRouter video job using uploaded performer reference images and selected venue context
-- [ ] **UI: video player** on the DJ profile and on the match preview
-- [x] **Async job pattern** — videos take >30s to generate; return a job id and poll
+- [x] **UI: video player** on `/personal-demo.html` (the personalized class demo). Standalone DJ-profile / match-preview integration on the main marketplace pages still pending.
+- [x] **Async job pattern** — videos take ~140s to generate; return a job id and poll
   - `GET /api/ai/demo-performance-video/{job_id}` polls the OpenRouter video job and returns the completed video URL when ready.
 
 ### ElevenLabs — voice synthesis
