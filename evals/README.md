@@ -187,3 +187,56 @@ Paste the headline numbers into SPEC §9.4.
 | `audio_rate_me.csv` | (generated) blank rating sheet |
 | `audio_analyses.json` | (generated) Gemini's structured reads per clip |
 | `audio_metrics.md` | (generated) headline T vs T+A report |
+
+---
+
+# Seedance Prompt Structure eval (SPEC §9.5)
+
+A deterministic, offline linter that verifies the rendered Seedance video
+prompt continues to follow the official **Seedance 2.0 AI Handbook**. Costs
+nothing (no API calls), runs in milliseconds, can be wired into CI later.
+
+This is not a "did the video look good?" test — it's a regression guard for
+the prompt structure itself. The motivation: an earlier free-prose prompt
+hit several of the handbook's named anti-patterns (adjective soup, too many
+camera moves, controlling everything equally). After restructuring per the
+handbook's Single-Shot Skeleton, this eval makes sure a future agent doesn't
+quietly revert it.
+
+## What it checks per venue
+
+For each seeded venue, the eval renders `build_seedance_prompt(...)` with
+realistic stand-in inputs (performer = "Pablo", style = melodic techno, with
+venue + 2 performer references) and runs 15 checks:
+
+| Category | Check | Handbook reference |
+|---|---|---|
+| **Single-Shot Skeleton sections** (9 checks) | Format / Asset roles / Subject / Environment / Main action / Camera / Lighting / Sound / Style each present | p.7 |
+| **Asset roles** | Uses R1/R2+ notation AND "Identity Sheet"/"Environment Sheet" terminology | p.5, p.11 |
+| **Camera vocabulary** | At least one of: dolly, track, crane, pan, tilt, zoom, shallow focus, close-up, handheld, establishing shot | p.16 |
+| **Lighting vocabulary** | At least one of: rim light, key light, fill light, backlight, soft/hard light, haze, golden hour, silhouette | p.16 |
+| **Constraint vocabulary** | At least one of: avoid, maintain, preserve, limit, emphasize, exclude, frame, restrict, highlight | p.16 |
+| **No banned anti-pattern phrases** | "premium editorial", "expressive crowd", "cinematic atmosphere" used as standalone style modifiers, etc. | p.14 |
+| **One dominant camera move** | The Camera: section names ≤1 primary move verb (no "dolly + pan + zoom" stacks) | p.4 principle 2; p.14 anti-pattern |
+
+## Running
+
+```bash
+# Default: pulls every seeded venue from the SQLite DB (auto-seeds if empty)
+python evals/seedance_prompt_eval.py
+
+# Or against canned stand-in venues (no DB required)
+python evals/seedance_prompt_eval.py --no-db
+```
+
+Exits non-zero if any venue fails any check, so it can be wired into CI as
+`python evals/seedance_prompt_eval.py --no-db` without external dependencies.
+
+Writes a markdown report to `evals/seedance_prompt_metrics.md`.
+
+## Files (Seedance prompt eval)
+
+| File | Purpose |
+|---|---|
+| `seedance_prompt_eval.py` | The linter; renders prompts and runs the 15 checks per venue |
+| `seedance_prompt_metrics.md` | (generated) per-venue + summary report |

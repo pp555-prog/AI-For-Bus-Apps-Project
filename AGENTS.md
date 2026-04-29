@@ -87,6 +87,8 @@ External AI (all routed through the single OpenRouter key):
 | `backend/seed.py` | Sample data generator | When test data needs to change |
 | `evals/run_eval.py` + `compute_metrics.py` | DJ-match eval harness (SPEC §9.3) | When prompt/scoring changes warrant a re-run |
 | `evals/audio_match_eval.py` + `audio_compute_metrics.py` | Audio-driven match eval (SPEC §9.4) — paired T vs T+A on `/api/ai/demo-venue-match` with one audio clip per seeded venue | When the audio analyzer or venue matcher changes; results go in SPEC §9.4 |
+| `evals/seedance_prompt_eval.py` | Seedance prompt-structure linter (SPEC §9.5) — verifies the rendered video prompt follows the Seedance 2.0 AI Handbook; deterministic, $0 to run | Whenever `backend/services/seedance_prompt.py` changes; can run in CI |
+| `backend/services/seedance_prompt.py` | Seedance video prompt builder; structured per the official Seedance 2.0 AI Handbook (Single-Shot Skeleton + asset roles + concrete vocabulary) | When the prompt structure or handbook citations change |
 | `init.sh` | First-time setup script | Rarely |
 | `run.py` | Launches uvicorn on port 8000 | Rarely |
 

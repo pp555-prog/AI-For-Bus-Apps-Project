@@ -74,6 +74,7 @@ AI-For-Bus-Apps-Project/
 |       |-- vibe_matcher.py   # LLM-powered DJ + venue matching engine
 |       |-- audio_analyzer.py # OpenRouter audio-input client (style read for personalized demo)
 |       |-- openrouter_video_client.py # OpenRouter async video generation
+|       |-- seedance_prompt.py # Seedance prompt builder (Seedance 2.0 AI Handbook structure)
 |       |-- lyria_client.py   # OpenRouter Lyria 3 music generation
 |       `-- higgsfield.py     # Legacy party-simulation prompt helper
 |-- ui/                       # Stitch-generated frontend (HTML/Tailwind CSS)
@@ -88,7 +89,8 @@ AI-For-Bus-Apps-Project/
 |   |-- compute_metrics.py    # §9.3 metrics report
 |   |-- audio_match_eval.py   # §9.4 audio-driven match eval (paired T vs T+A)
 |   |-- audio_compute_metrics.py # §9.4 lift metrics report
-|   `-- audio_samples/        # Per-venue audio clips for §9.4 (gitignored)
+|   |-- audio_samples/        # Per-venue audio clips for §9.4 (gitignored)
+|   `-- seedance_prompt_eval.py # §9.5 Seedance prompt-structure linter (handbook-based)
 |-- n8n/
 |   `-- workflows/booking_confirmation.json  # n8n workflow JSON; import into n8n Cloud
 |-- AGENTS.md                 # Universal AI agent onboarding; READ FIRST

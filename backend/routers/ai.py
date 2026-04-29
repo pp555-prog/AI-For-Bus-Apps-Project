@@ -28,6 +28,7 @@ from backend.services import (
     llm_client,
     lyria_client,
     openrouter_video_client,
+    seedance_prompt,
     vibe_matcher,
     higgsfield,
 )
@@ -46,81 +47,6 @@ async def _ensure_venue_exists(db, venue_id: str) -> None:
     rows = await db.execute_fetchall("SELECT id FROM venues WHERE id = ?", [venue_id])
     if not rows:
         raise HTTPException(status_code=404, detail=f"Venue '{venue_id}' not found")
-
-
-def _build_seedance_prompt(
-    *,
-    performer_name: str,
-    venue: Venue,
-    style_text: str,
-    has_venue_ref: bool,
-    performer_ref_count: int,
-) -> str:
-    """Construct a Seedance 2.0 video prompt following the official handbook.
-
-    Structured per the Single-Shot Skeleton (Seedance 2.0 AI Handbook p.7):
-    Subject / Environment / Main action / Camera / Lighting / Style / Audio,
-    plus an explicit Asset-Roles block (handbook p.5: "References need roles
-    — define HOW external information is used, not just state it") and a
-    Constraints block (handbook p.16 vocabulary: avoid / preserve / maintain).
-
-    Avoids the handbook's named anti-patterns (p.14): adjective soup, too many
-    camera moves, unassigned reference stacks, controlling everything equally.
-    Uses concrete vocabulary (p.16) for camera ("dolly in", "shallow focus",
-    "medium close-up") and lighting ("rim light", "key light", "haze").
-    """
-    refs_lines: list[str] = []
-    if has_venue_ref:
-        refs_lines.append(
-            "R1 = Environment Sheet (the matched venue): use only for "
-            "architecture, materials, scale, color palette, and lighting language."
-        )
-    if performer_ref_count > 0:
-        slot = 2 if has_venue_ref else 1
-        plural = "+" if performer_ref_count > 1 else ""
-        refs_lines.append(
-            f"R{slot}{plural} = Identity Sheet ({performer_name}): use only for "
-            "face, build, hair, and clothing. Do not redesign the performer."
-        )
-    asset_roles = " ".join(refs_lines) or "References: identity only."
-
-    venue_vibe_phrase = ", ".join(venue.vibe_tags) or "club"
-    venue_location = venue.city or "the city"
-    env_anchor = "matching R1 exactly" if has_venue_ref else f"a {venue_vibe_phrase} club interior"
-
-    return (
-        # Format/Goal
-        "Format: one continuous 10-second photoreal music-performance shot, "
-        "single take, no edits, no graphic overlays. "
-        # Asset Roles (handbook principle 5)
-        f"Asset roles: {asset_roles} "
-        # Subject
-        f"Subject: {performer_name}, identity locked to the Identity Sheet references. "
-        # Environment (handbook principle 4: environment is active, not wallpaper)
-        f"Environment: interior of {venue.name} in {venue_location}, "
-        f"{env_anchor}; small audience visible in the foreground as silhouettes. "
-        # Main action (handbook principle 1: one dominant readable action; principle 3: physical)
-        f"Main action: {performer_name} stands behind the DJ booth, both hands working the mixer, "
-        "head nodding to the beat. "
-        # Camera (handbook principle 2: camera serves story; one move only)
-        "Camera: slow dolly-in from the back of the room toward the booth, "
-        f"ending in a medium close-up of {performer_name}; shallow focus on the performer throughout. "
-        # Lighting (concrete vocabulary from p.16)
-        + (
-            f"Lighting: match the lighting language of R1 ({venue_vibe_phrase}); "
-            if has_venue_ref
-            else f"Lighting: {venue_vibe_phrase} club aesthetic; "
-        ) +
-        "soft haze in the air, rim light behind the performer, single key light from above the booth. "
-        # Sound
-        "Sound: silent. "
-        # Style
-        f"Style: photoreal documentary; the musical style being performed is {style_text}. "
-        # Constraints (handbook p.16 vocabulary)
-        f"Preserve {performer_name}'s exact face, hair, and clothing from the Identity Sheet. "
-        "Avoid: text overlays, logos, watermarks, brand names, captions, on-screen graphics, "
-        "celebrity likenesses."
-    )
 
 
 def _venue_match_score(style: str, venue: Venue) -> tuple[int, str]:
@@ -395,7 +321,7 @@ async def demo_performance_video(request: DemoPerformanceVideoRequest):
         input_references.append(venue_image_url)
     input_references.extend(performer_refs)
 
-    prompt = _build_seedance_prompt(
+    prompt = seedance_prompt.build_seedance_prompt(
         performer_name=request.performer_name,
         venue=venue,
         style_text=request.style,
