@@ -63,8 +63,9 @@ class DJListItem(BaseModel):
     fee_from: int | None = None
     badge: str | None = None
     vibe_keywords: list[str] = []
+    availability: list[str] = []
 
-    @field_validator("genres", "vibe_keywords", mode="before")
+    @field_validator("genres", "vibe_keywords", "availability", mode="before")
     @classmethod
     def _parse_list(cls, v: Any) -> list[str]:
         return _parse_json_field(v) if v else []
@@ -114,10 +115,15 @@ class BookingResponse(BaseModel):
     created_at: str | None = None
 
 
+class DJAvailabilityUpdate(BaseModel):
+    availability: list[str]
+
+
 # ── AI: Vibe Match ──────────────────────────────────────────────────────────
 
 class VibeMatchRequest(BaseModel):
     query: str
+    event_date: str | None = None
 
 
 class VibeMatchResult(BaseModel):
@@ -217,6 +223,19 @@ class DemoMusicPreviewResponse(BaseModel):
     audio_url: str | None = None
     audio_data_url: str | None = None
     prompt: str
+    provider: str
+    generated: bool
+    note: str
+
+
+class DemoMuxVideoRequest(BaseModel):
+    video_url: str
+    audio_url: str | None = None
+    audio_data_url: str | None = None
+
+
+class DemoMuxVideoResponse(BaseModel):
+    video_url: str | None = None
     provider: str
     generated: bool
     note: str

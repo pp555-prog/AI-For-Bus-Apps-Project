@@ -125,7 +125,7 @@
 <!-- Sticky Left Sidebar -->
 <aside class="hidden lg:block w-[300px] h-[calc(100vh-5rem)] sticky top-20 glass-sidebar border-r border-outline-variant/10 px-6 py-8 overflow-y-auto custom-scrollbar">
 <div class="space-y-10">
-<!-- Suno AI Matchmaker Section -->
+<!-- AI Matchmaker Section -->
 <section>
 <div class="flex items-center gap-2 mb-4">
 <span class="material-symbols-outlined text-primary" style="font-variation-settings: 'FILL' 1;">storm</span>
@@ -137,6 +137,10 @@
 <span class="material-symbols-outlined text-sm">auto_awesome</span>
 </button>
 </div>
+<label class="mt-4 block">
+<span class="mb-2 block text-xs font-bold tracking-widest uppercase text-on-surface-variant">Event Date</span>
+<input id="eventDate" class="w-full rounded-xl border border-outline-variant/30 bg-surface-container-lowest px-4 py-3 text-sm text-on-surface focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/40" type="date"/>
+</label>
 </section>
 <!-- BPM Filter -->
 <section>
@@ -359,7 +363,7 @@ function waveformHTML() {
 }
 
 // Render DJ result card
-function djCard(dj, score, reasoning) {
+function djCard(dj, score, reasoning, eventDate) {
   const setupLabel = {digital: 'DIGITAL', vinyl: 'VINYL ONLY', hybrid: 'LIVE HYBRID'}[dj.setup] || dj.setup?.toUpperCase() || '';
   const setupClass = dj.setup === 'hybrid' || dj.badge
     ? 'text-xs text-primary bg-primary/10 px-2 py-0.5 rounded-full border border-primary/20'
@@ -367,6 +371,9 @@ function djCard(dj, score, reasoning) {
   const badgeHTML = dj.badge ? `<div class="absolute -bottom-2 -right-2 bg-primary text-on-primary text-[10px] font-bold px-2 py-1 rounded">${dj.badge}</div>` : '';
   const scoreHTML = score ? `<div class="text-xs text-primary mb-1">${score}% match</div>` : '';
   const reasonHTML = reasoning ? `<p class="text-xs text-on-surface-variant mt-2 italic">${reasoning}</p>` : '';
+  const availabilityHTML = eventDate
+    ? `<div class="text-[10px] uppercase tracking-widest text-primary mb-2">Available ${eventDate}</div>`
+    : '';
 
   return `
     <article class="group bg-surface-container-high hover:bg-surface-bright transition-all duration-300 rounded-2xl overflow-hidden p-6 flex flex-col md:flex-row items-center gap-8 border-l-2 border-transparent hover:border-primary shadow-xl">
@@ -389,6 +396,7 @@ function djCard(dj, score, reasoning) {
         ${reasonHTML}
       </div>
       <div class="shrink-0 flex flex-col items-center md:items-end gap-2">
+        ${availabilityHTML}
         <div class="text-sm text-on-surface font-mono tracking-tighter mb-2">FROM $${(dj.fee_from || 0).toLocaleString()}</div>
         <a href="/booking.html?dj=${dj.id}" class="bg-gradient-to-br from-primary to-primary-container text-on-primary px-8 py-3 rounded-lg font-bold text-sm tracking-widest hover:scale-105 transition-transform shadow-lg shadow-primary/20 inline-block text-center">
           BOOK
@@ -398,9 +406,9 @@ function djCard(dj, score, reasoning) {
 }
 
 // Render results
-function renderResults(djs, isVibeMatch = false) {
+function renderResults(djs, isVibeMatch = false, eventDate = '') {
   resultsContainer.innerHTML = djs.map(item => {
-    if (isVibeMatch) return djCard(item.dj, item.score, item.reasoning);
+    if (isVibeMatch) return djCard(item.dj, item.score, item.reasoning, eventDate);
     return djCard(item);
   }).join('');
 }
@@ -409,10 +417,12 @@ function renderResults(djs, isVibeMatch = false) {
 const vibeBtn = document.querySelector('button .material-symbols-outlined')?.closest('button') ||
   document.querySelector('aside button');
 const vibeTextarea = document.querySelector('textarea');
+const eventDateInput = document.getElementById('eventDate');
 
 if (vibeBtn && vibeTextarea) {
   vibeBtn.addEventListener('click', async () => {
     const query = vibeTextarea.value.trim();
+    const eventDate = eventDateInput?.value || '';
     if (!query) return;
 
     // Update header
@@ -425,7 +435,7 @@ if (vibeBtn && vibeTextarea) {
       const res = await fetch(`${API}/api/ai/vibe-match`, {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({query})
+        body: JSON.stringify(eventDate ? {query, event_date: eventDate} : {query})
       });
       const data = await res.json();
 
@@ -433,10 +443,11 @@ if (vibeBtn && vibeTextarea) {
         headerEl.querySelector('h1').textContent = 'Vibe Results';
         const interp = data.query_interpretation || query;
         const count = data.results?.length || 0;
+        const dateCopy = eventDate ? ` for <span class="text-primary">${eventDate}</span>` : '';
         headerEl.querySelector('p').innerHTML =
-          `${count} artists matched your atmosphere: <span class="italic text-on-surface">"${interp}"</span>`;
+          `${count} artists matched your atmosphere${dateCopy}: <span class="italic text-on-surface">"${interp}"</span>`;
       }
-      renderResults(data.results || [], true);
+      renderResults(data.results || [], true, eventDate);
     } catch (err) {
       if (headerEl) {
         headerEl.querySelector('h1').textContent = 'Error';

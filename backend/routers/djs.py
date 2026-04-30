@@ -1,9 +1,13 @@
+import json
+import re
+
 from fastapi import APIRouter, HTTPException, Query
 
 from backend.database import get_db
-from backend.models import DJ, DJListItem
+from backend.models import DJ, DJAvailabilityUpdate, DJListItem
 
 router = APIRouter()
+DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 
 
 @router.get("/djs", response_model=list[DJListItem])
@@ -51,5 +55,28 @@ async def get_dj(dj_id: str):
         if not rows:
             raise HTTPException(status_code=404, detail=f"DJ '{dj_id}' not found")
         return DJ(**dict(rows[0]))
+    finally:
+        await db.close()
+
+
+@router.patch("/djs/{dj_id}/availability", response_model=DJ)
+async def update_dj_availability(dj_id: str, request: DJAvailabilityUpdate):
+    """Replace a DJ's bookable dates with a sorted unique YYYY-MM-DD list."""
+    clean_dates = sorted({d.strip() for d in request.availability if DATE_RE.match(d.strip())})
+    if len(clean_dates) != len({d.strip() for d in request.availability}):
+        raise HTTPException(status_code=422, detail="Availability dates must use YYYY-MM-DD format")
+
+    db = await get_db()
+    try:
+        rows = await db.execute_fetchall("SELECT id FROM djs WHERE id = ?", [dj_id])
+        if not rows:
+            raise HTTPException(status_code=404, detail=f"DJ '{dj_id}' not found")
+        await db.execute(
+            "UPDATE djs SET availability = ? WHERE id = ?",
+            [json.dumps(clean_dates), dj_id],
+        )
+        await db.commit()
+        updated = await db.execute_fetchall("SELECT * FROM djs WHERE id = ?", [dj_id])
+        return DJ(**dict(updated[0]))
     finally:
         await db.close()

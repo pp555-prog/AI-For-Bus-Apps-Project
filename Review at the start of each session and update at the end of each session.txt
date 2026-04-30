@@ -2418,6 +2418,783 @@ WHAT COMES NEXT
 4. If any dimension averages low, iterate on backend/services/seedance_prompt.py
    (the §9.5 linter will continue to gate structural changes).
 
+--------------------------------------------------------------------------------
+SESSION 28 — First §9.6 Run + Three Real-World Constraints Discovered
+Date:    2026-04-29
+Agent:   Claude Opus 4.7
+--------------------------------------------------------------------------------
+
+CONTEXT
+-------
+Pablo ran the §9.6 Seedance Video Output eval end-to-end for the first time,
+with two real performer photos and the three default venues. The first run
+hit a chain of three blockers that turned the session into a debug session;
+each one taught us something the SPEC needs to record. The eval ultimately
+succeeded (3/3 videos) on the third configuration, but the personalized-face
+beat is permanently blocked at the model providers' content-moderation layer.
+
+BLOCKERS HIT (in order)
+------------------------
+1. Backend running on port 8000 was a stale orphan from earlier in the
+   session, holding the port and serving the OLD code (no demo-* endpoints).
+   PowerShell's Stop-Process couldn't kill it (different security session,
+   needed admin). Workaround: launched a fresh backend on port 8001 with
+   `uvicorn backend.main:app --port 8001 --reload`, used --api flag in the
+   eval to point at it. SPEC §9.6 protocol now mentions the --api override.
+
+2. First successful eval submit got back a response with id=null,
+   polling_url=null. Direct test with a tiny dummy image worked (returned
+   real id). Diagnosis: OpenRouter video silently returns 200 OK with no
+   id when the image data URLs are large (Pablo's photos = 1.85 + 2.67 MB
+   raw, ~6 MB combined as base64). Workaround: added Pillow to
+   requirements.txt and updated evals/seedance_video_eval.py encode_image()
+   to auto-resize photos to <=1024 px JPEG quality 85 before encoding.
+   Each photo now lands at ~150 KB base64. Documented as known limitation
+   in evals/README.md and SPEC §9.6.
+
+3. With photos resized, OpenRouter returned a real 502 Bad Gateway. After
+   we added body capture to the eval's submit_video, the upstream message
+   surfaced: ByteDance/Seedance's content-safety policy
+   "InputImageSensitiveContentDetected.PrivacyInformation" -- "The request
+   failed because the input image may contain real person." This is the
+   same policy on Google Veo 3.1 and OpenAI Sora 2; it is a model-provider
+   deployment policy, not a prompt-engineering problem.
+
+WHAT WAS DONE
+-------------
+1. requirements.txt: added Pillow>=10,<13.
+
+2. evals/seedance_video_eval.py:
+   - Added `import json`.
+   - Added image-resize logic in encode_image() using Pillow (max 1024 px,
+     JPEG quality 85). Falls back to raw bytes with a warning if Pillow
+     isn't installed.
+   - Added a no-job-id diagnostic block: prints the raw submit response
+     when job_id is missing so we can see exactly what came back.
+   - Improved submit_video error handling to capture the response body in
+     the exception message (so HTTP 502s surface OpenRouter's actual
+     upstream error, not just the URL/status code).
+
+3. backend/routers/ai.py demo_performance_video:
+   - Stopped sending performer photos to Seedance. Only venue.image_url
+     goes into input_references. Performer photos are still uploaded by
+     the frontend for UX continuity but are intentionally dropped server-
+     side. Inline comment cites the moderation policy and points at SPEC
+     §9.6.
+   - Calls seedance_prompt.build_seedance_prompt with
+     performer_ref_count=0 hardcoded.
+
+4. backend/services/seedance_prompt.py:
+   - Forked the prompt template into two clean branches: WITH Identity
+     Sheet (preserves face from references), and WITHOUT (renders a
+     generic stand-in DJ). Refactored to a sections list + "".join()
+     to avoid the unary-+ string concatenation bug from the first edit.
+   - Initially biased the no-Identity-Sheet branch toward back/three-
+     quarter framing so the model wouldn't have to invent a face. Pablo
+     flagged that all three rendered videos showed the DJ from behind.
+   - Switched to "Path B": dropped the back-only constraint and let the
+     model render a plausible front-facing generic DJ for the close-up.
+     Camera and Action sections are now identical to the WITH-photos
+     branch; only the Subject and identity_constraint differ.
+
+5. evals/performer_photos/.gitkeep + .gitignore patterns so personal
+   photos stay local.
+
+6. Doc consistency pass:
+   - SPEC.docx §8 paragraph: rewrote to note that performer photos are
+     uploaded but not forwarded to Seedance, with the moderation rationale.
+   - SPEC.docx §9.6 paragraph: rewrote to capture the three findings
+     (size limit, moderation block, Path A vs Path B) plus a note that
+     the identity_preservation rubric dimension is N/A under the
+     constraint.
+   - README.md Tech Stack OpenRouter Video row: notes the moderation
+     constraint and links to SPEC §9.6.
+   - README.md key features "Personalized video previews": same.
+   - README.md project tree: adds evals/performer_photos/.
+   - AGENTS.md class-demo-flow paragraph: updated.
+   - AGENTS.md conventions: new bullets on the moderation block and the
+     data-URL size limit.
+   - CLAUDE.md: same two bullets so a future Claude doesn't re-enable
+     performer photos by accident.
+   - TASKS.md §9.6 entry: marks first run complete (3/3 videos) and adds
+     a "Known limitations" subsection.
+   - evals/README.md §9.6: new "Known limitations" section with the
+     real-person policy + Pillow / size-limit notes; rubric guidance
+     updated to mark identity_preservation as N/A.
+
+7. Spend this session: ~$6.04 of $10. Remaining balance ~$2.41.
+   Breakdown: smoke Test 1 (~$1.51, real Seedance with dummy image) +
+   3 successful eval videos (~$4.53). Two failed-at-submit attempts and
+   three 502s cost $0 (OpenRouter rejects don't bill).
+
+8. Pillow installed in the venv via
+   `.\\.venv\\Scripts\\python.exe -m pip install Pillow` (the bare pip.exe
+   launcher in the venv has a stale hardcoded python.exe path from an
+   earlier folder layout and fails with "Fatal error in launcher";
+   `python -m pip` bypasses the broken launcher).
+
+KEY DECISIONS
+-------------
+- Drop performer photos from the Seedance call rather than wait for a
+  policy change or pivot to a different provider. Reason: the demo needs
+  to work this week, and every major hosted video model has the same
+  policy. Documenting this as a SPEC finding is academically stronger
+  than papering over it.
+- Test Path B (front-facing generic DJ) instead of locking in Path A
+  (back-only). Reason: Pablo's preference + a more dynamic demo. The
+  generic-face uncanny risk is worth the visual payoff; audiences will
+  read the DJ as a stand-in stylization, not a failed attempt at the
+  real performer.
+- Resize photos client-side via Pillow rather than upload to a CDN and
+  pass HTTPS URLs. Reason: Pillow is one dep; CDN setup is multiple
+  steps and adds an external dependency the eval shouldn't need.
+- Run the backend on port 8001 instead of fighting Windows + OneDrive
+  for control of port 8000. Reason: the orphan process required admin
+  to kill; the eval supports --api so the workaround is one flag.
+
+WHAT WAS TESTED
+---------------
+- ast.parse on all modified Python files: all OK.
+- evals/seedance_prompt_eval.py --no-db: 3/3 venues pass all 15 §9.5
+  checks under both the Path A and Path B prompt variants.
+- Live §9.6 generation: 3 videos rendered and downloaded successfully on
+  the venue-only / Path A configuration. Path B prompt variant has been
+  wired but not yet generated against (one ~$1.51 retest on berghain-
+  berlin is queued as Pablo's next manual step).
+
+WHAT WAS NOT TESTED
+-------------------
+- Path B videos. Next step is to re-run berghain-berlin with the new
+  front-facing prompt and compare with the back-only version saved in
+  evals/seedance_outputs/.
+- Rubric ratings. seedance_video_rate_me.csv has not yet been filled in.
+  Until it is, evals/seedance_video_metrics.md cannot be generated.
+
+WHAT COMES NEXT
+---------------
+1. Pablo runs one Path B test on berghain-berlin (~$1.51) and decides
+   between front-facing generic and back-only as the §9.6 baseline.
+2. Optionally re-runs Path B for the-nest and amnesia-ibiza (~$3.02 more)
+   to round out the eval set under the chosen configuration.
+3. Watches the videos and fills in seedance_video_rate_me.csv per the
+   rubric (with identity_preservation marked N/A or rated 3 across the
+   board).
+4. Runs evals/seedance_video_compute_metrics.py to produce
+   seedance_video_metrics.md.
+5. Pastes the headline composite + pass-rate into SPEC §9.6.
+6. Top up OpenRouter credits if the remaining ~$2.41 is too tight for
+   demo rehearsals.
+7. Commit everything from today's debug as one or two coherent commits.
+
+--------------------------------------------------------------------------------
+SESSION 29 — Path C: Switch Seedance Prompt to Multi-Shot Afterparty Arc
+Date:    2026-04-30
+Agent:   Claude Opus 4.7
+--------------------------------------------------------------------------------
+
+CONTEXT
+-------
+Pablo finished filling in seedance_video_rate_me.csv for the three Path B
+videos (front-facing generic DJ, single continuous shot) but pushed back
+on the visual: the videos felt visually inert -- one static angle of the
+DJ, no narrative arc. Pablo's framing: "the video should have multishot
+cinematic sequences, not just one angle of the dj. it would be more of an
+'afterparty' type of shot." That maps cleanly onto the Seedance 2.0
+Handbook's Multi-Shot Mode (p.8): "Linked beats across time. Beat
+Structure: Establish -> Develop -> Payoff. Best for: event highlights
+(chronological flow)." Decision: pivot to Path C (Multi-Shot afterparty
+arc) before completing the §9.6 rubric.
+
+WHAT WAS DONE
+-------------
+1. backend/services/seedance_prompt.py: rewrote build_seedance_prompt to
+   produce a 10-second three-beat afterparty arc instead of a single
+   continuous shot. Beats:
+   - Beat 1 (Establish, ~3 s): wide shot, slow dolly-in through silhouetted
+     crowd toward the DJ booth; haze drifts, lights pulse.
+   - Beat 2 (Develop, ~4 s): medium shot of the DJ at the booth, hands on
+     the mixer, head nodding; brief handheld cutaways to dancers reacting.
+   - Beat 3 (Payoff, ~3 s): wide reveal from behind the booth looking out
+     across the room as the crowd erupts; lights peak, signature venue
+     energy at its fullest.
+   Single-Shot Skeleton sections (Format / Asset Roles / Subject /
+   Environment / Main action / Camera / Lighting / Style / Sound /
+   Constraints) are still present per handbook p.7, just reframed around
+   the three beats. Camera section explicitly names one dominant move per
+   beat with crossfade transitions (handbook p.8 + p.4 #2). Asset roles,
+   identity-handling branches (with vs without Identity Sheet), and
+   constraint vocabulary unchanged from Path B.
+
+2. evals/seedance_prompt_eval.py: replaced check_one_camera_move with
+   check_camera_structure (kept as backward-compat alias). The new check
+   auto-detects mode by looking for explicit Beat 1/Beat 2/Beat 3 markers:
+   - Single-Shot mode: existing logic — ≤1 primary camera-move verb in
+     the Camera: section.
+   - Multi-Shot mode: requires all three beats present.
+   Result: §9.5 still 3/3 green on canned venues with the new prompt;
+   the check now correctly accepts the multiple linked-but-distinct
+   camera moves a Multi-Shot prompt legitimately needs.
+
+3. Doc consistency pass:
+   - AGENTS.md convention bullet on "The Seedance prompt is structured per
+     the official handbook" rewritten to describe the three beats and the
+     mode-aware linter; corrected the path to backend/services/seedance_prompt.py
+     (had drifted from when the helper lived in routers/ai.py).
+   - CLAUDE.md: new bullet "Seedance prompt is Multi-Shot, not Single-Shot"
+     so a future Claude doesn't collapse it back.
+   - TASKS.md §9.5 entry: rewrote to mention mode-aware camera check.
+   - evals/README.md §9.5 check table: "One dominant camera move" row
+     replaced with "Camera structure (mode-aware)" row citing handbook
+     p.4 #2 + p.8 + p.14.
+   - SPEC.docx §9.5: added a sentence explaining the auto-detect
+     Single-Shot vs Multi-Shot logic and that the current shipped prompt
+     is Multi-Shot.
+   - SPEC.docx §9.6: added Path C as the third tested variant -- "switch
+     to Multi-Shot Mode ... to replace the visually inert single-angle
+     Path B with a chronological event-highlight feel. Path C is what is
+     shipped to the rubric."
+
+4. Side note on cost discipline: Pablo topped up OpenRouter mid-session
+   to enable a clean three-venue Path B run (~$4.53). The Path C test
+   currently in flight is a single-venue probe (~$1.51) before deciding
+   whether to invest in a full three-venue Path C eval.
+
+KEY DECISIONS
+-------------
+- Pivot to Multi-Shot mid-rubric rather than ship the Path B numbers as
+  the §9.6 baseline. Reason: the rubric scores would document a less-
+  good version of the demo. Better to record Path B as a tested-and-
+  superseded variant in §9.6 and put rubric numbers next to the version
+  we actually want to demo.
+- Keep the §9.5 linter mode-aware rather than hard-code Multi-Shot. Reason:
+  if a future Seedance model favors single-shot or someone wires a
+  different mode, the linter should validate whichever mode the prompt
+  declares, not impose one.
+- Preserve the existing Path B rubric CSV before the re-run by copying
+  to seedance_video_rate_me_pathB.csv (suggested to Pablo; up to him to
+  execute before re-running). Reason: keeps the Path B baseline available
+  for §9.6 Path-A-vs-B-vs-C narrative.
+
+WHAT WAS TESTED
+---------------
+- ast.parse on both modified Python files: OK.
+- evals/seedance_prompt_eval.py --no-db: 3/3 venues pass all 15 checks
+  under the new Multi-Shot prompt; the camera-structure check now reports
+  "camera structure (multi-shot: Establish/Develop/Payoff beats)".
+- Pablo kicked off a single-venue (berghain-berlin) Seedance generation
+  with the new prompt. Wall-clock and output quality TBD when the job
+  completes.
+
+WHAT WAS NOT TESTED
+-------------------
+- Path C video output. The first Path C generation is in flight as of
+  this writeup.
+- Whether the model actually produces three distinct beats in 10 seconds
+  or smears them into a single ramp. Will judge against the rendered
+  clip and iterate the beat timings if needed.
+- Full three-venue Path C eval. Cost: ~$3.02 more after the single-venue
+  test. Pablo will decide based on the test result.
+
+WHAT COMES NEXT
+---------------
+1. Pablo watches the Path C berghain MP4 and decides whether to commit
+   to a full three-venue Path C re-run (~$3.02 more) or iterate the
+   prompt first.
+2. If full re-run: it overwrites the Path B videos and rate_me CSV.
+   Suggested before-run: Copy-Item the current Path B rate_me + results
+   files to *_pathB.csv so the §9.6 narrative can compare A vs B vs C.
+3. Re-rate the three Path C videos in seedance_video_rate_me.csv.
+4. Run evals/seedance_video_compute_metrics.py to write the §9.6 metrics
+   report.
+5. Paste headline composite + per-dimension averages into SPEC §9.6.
+6. Consolidated commit covering today's resize/diagnostic fixes + the
+   Path B/C iteration + the moderation finding + all doc updates.
+
+SESSION 30 — Doc Consistency Cleanup After Audit
+Date:    2026-04-30
+Agent:   OpenAI Codex
+
+WHAT WAS DONE
+-------------
+1. Resolved the doc/code default-model drift:
+   - backend/config.py now defaults OPENROUTER_MODEL to
+     openai/gpt-oss-120b:free, matching README.md, TASKS.md, AGENTS.md,
+     CLAUDE.md, .env.example, and evals/README.md.
+   - backend/services/llm_client.py docstring now names that default.
+
+2. Locked the §9.6 identity policy to Pablo's decision:
+   - identity_preservation is N/A under current real-person image moderation
+     constraints, but should be scored as neutral 3 for comparability.
+   - Updated TASKS.md, evals/README.md, evals/seedance_video_eval.py,
+     evals/seedance_video_compute_metrics.py, and SPEC.docx §9.6 accordingly.
+
+3. Removed stale performer-photo forwarding language from current product docs:
+   - TASKS.md now says demo-performance-video forwards only the venue image;
+     performer images are accepted by the UI/eval harness but intentionally
+     not forwarded to Seedance/Veo/Sora while the moderation block remains.
+   - AGENTS.md had already been corrected; verified the stale wording is gone.
+
+4. Neutralized stale provider-specific wording:
+   - backend/routers/ai.py promo prompt endpoint now returns provider-neutral
+     `music_prompt` and `voice_script` keys.
+   - party-simulation docstring now describes a provider-neutral video prompt
+     rather than a Higgsfield-specific prompt.
+   - evals/run_eval.py now reports OPENROUTER_API_KEY/OpenRouter/matcher in
+     user-facing errors while keeping historical `claude_*` CSV column names.
+
+FILES CHANGED
+-------------
+- backend/config.py
+- backend/services/llm_client.py
+- backend/routers/ai.py
+- evals/run_eval.py
+- evals/seedance_video_eval.py
+- evals/seedance_video_compute_metrics.py
+- evals/README.md
+- TASKS.md
+- SPEC.docx
+- Review at the start of each session and update at the end of each session.txt
+
+KEY DECISIONS
+-------------
+- Keep identity_preservation in the five-dimension §9.6 composite, but rate it
+  as neutral 3 until a provider path can legally/technically use consenting
+  performer images. Reason: Pablo chose comparability over changing the
+  metric schema mid-eval.
+- Keep legacy/canned endpoints but neutralize wording where it sounded like
+  Suno/Higgsfield were current runtime providers. Reason: the fallback stubs
+  still exist, but the live demo path is OpenRouter + Lyria + Seedance.
+
+WHAT WAS TESTED
+---------------
+- AST parse check on:
+  backend/config.py, backend/routers/ai.py, backend/services/llm_client.py,
+  evals/run_eval.py, evals/seedance_video_eval.py, and
+  evals/seedance_video_compute_metrics.py.
+- String scans for stale ANTHROPIC_API_KEY, "querying Claude", performer-photo
+  forwarding, "not-evaluated", Suno AI music, and Higgsfield video prompt
+  wording in the touched docs/code.
+- Rendered SPEC.docx with artifact-tool and visually checked the §9.6 pages;
+  layout looked clean after the small text edit.
+
+WHAT WAS NOT TESTED
+-------------------
+- No backend started.
+- No eval scripts run.
+- No OpenRouter, Lyria, Seedance, n8n, or external API calls made.
+- No generated videos or in-progress rating CSVs modified.
+
+WHAT COMES NEXT
+---------------
+1. Pablo can continue the §9.6 rating with identity_preservation set to 3
+   neutral on every current row.
+2. Once ratings are complete, run evals/seedance_video_compute_metrics.py and
+   paste headline numbers into SPEC §9.6.
+3. Consider a later small cleanup to remove unused legacy env settings if they
+   are no longer needed for old .env compatibility.
+
+SESSION 31 — DJ Availability UI + Vibe-Match Date Filter
+Date:    2026-04-30
+Agent:   OpenAI Codex
+
+WHAT WAS DONE
+-------------
+1. Added availability to the lightweight DJ list schema:
+   - backend/models.py DJListItem now parses/exposes `availability`.
+   - VibeMatchRequest now accepts optional `event_date`.
+
+2. Added an availability update endpoint:
+   - PATCH /api/djs/{dj_id}/availability
+   - Replaces the DJ's bookable dates with a sorted unique YYYY-MM-DD list.
+   - Stores the list in the existing `djs.availability` JSON-as-TEXT column,
+     preserving the project's SQLite + no-ORM convention.
+
+3. Updated AI vibe matching:
+   - POST /api/ai/vibe-match filters candidate DJs to those available on
+     `event_date` when supplied.
+   - If no DJs list availability on that date, returns an empty result set
+     with a clear query_interpretation rather than calling the LLM.
+   - Post-filters returned IDs as a guard in case the LLM returns an ID
+     outside the candidate set.
+
+4. Updated the UI:
+   - ui/search.html now includes an Event Date input in Vibe Intelligence and
+     sends `event_date` to /api/ai/vibe-match.
+   - Search results show an "Available YYYY-MM-DD" marker when date-filtered.
+   - ui/vibe-search.html Booking Horizon is now interactive: clicking a date
+     toggles it as bookable/unbookable and saves through the PATCH endpoint.
+
+5. Updated TASKS.md:
+   - Checked off Calendar input UI and Match filter.
+   - Left Availability storage unchecked because this pass keeps exact-date
+     list storage; true date-range semantics remain a follow-up.
+
+FILES CHANGED
+-------------
+- backend/models.py
+- backend/routers/djs.py
+- backend/routers/ai.py
+- ui/search.html
+- ui/vibe-search.html
+- TASKS.md
+- Review at the start of each session and update at the end of each session.txt
+
+KEY DECISIONS
+-------------
+- Treat `availability` as bookable dates, not blocked dates. Reason: existing
+  seed data and profile UI already use it as dates that can be highlighted
+  as available/bookable.
+- Keep the current JSON-as-TEXT exact-date list for now rather than introducing
+  a new availability table or date-range schema. Reason: fast demo value and
+  consistency with the project's JSON column convention; true ranges are still
+  tracked in TASKS.md.
+- Filter before the LLM call. Reason: date availability is a hard operational
+  constraint, not a soft vibe preference.
+
+WHAT WAS TESTED
+---------------
+- AST parse check on backend/models.py, backend/routers/djs.py, and
+  backend/routers/ai.py.
+- Direct helper smoke: _dj_available_on returns true for no date and matching
+  dates, false for non-matching dates.
+- Static scans confirmed event_date / availability wiring is present in the
+  backend and UI files.
+
+WHAT WAS NOT TESTED
+-------------------
+- Full FastAPI TestClient smoke was attempted against a temporary SQLite DB,
+  but startup hit a local sqlite disk I/O error under OneDrive before reaching
+  the endpoints.
+- Backend server was not started.
+- Browser UI was not manually exercised.
+- No OpenRouter or other external API calls were made.
+
+WHAT COMES NEXT
+---------------
+1. Start the backend and manually test:
+   - PATCH /api/djs/{id}/availability
+   - POST /api/ai/vibe-match with and without `event_date`
+   - /search.html date-filtered vibe search
+   - /vibe-search.html calendar click/save behavior
+2. Implement the remaining TASKS.md availability item: true date-range
+   semantics for storage and matching.
+3. If the demo needs it, add visual month navigation to the Booking Horizon
+   calendar instead of the current current-month-plus-35-days view.
+
+SESSION 32 - Lyria UI Surface Cleanup
+Date:    2026-04-30
+Agent:   OpenAI Codex
+
+WHAT WAS DONE
+-------------
+1. Removed stale Suno wording from the live UI surface:
+   - ui/search.html no longer labels the sidebar as "Suno AI Matchmaker."
+   - ui/vibe-search.html labels the profile preview as Lyria 3 music, not
+     Suno.
+
+2. Wired the DJ profile music preview button to the live Lyria demo endpoint:
+   - The profile page now calls POST /api/ai/demo-music-preview for music.
+   - The request uses the loaded DJ name plus tagline/genres/vibe keywords
+     and the first venue as the demo venue context.
+   - The audio renderer now accepts either an audio data URL from live Lyria
+     or the static fallback asset URL.
+
+3. Neutralized the legacy canned music endpoint:
+   - POST /api/ai/music-preview still exists for old callers, but its docstring
+     and provider field now describe the Lyria/fallback path instead of Suno.
+
+FILES CHANGED
+-------------
+- backend/routers/ai.py
+- ui/search.html
+- ui/vibe-search.html
+- Review at the start of each session and update at the end of each session.txt
+
+KEY DECISIONS
+-------------
+- Keep /api/ai/music-preview as a compatibility fallback rather than deleting
+  it. Reason: older UI/docs may still reference it, and the static asset is
+  harmless as a fallback.
+- Make /api/ai/demo-music-preview the profile-page music action. Reason: the
+  project has already shipped Lyria 3 through OpenRouter as the actual live
+  music generation path.
+
+WHAT WAS TESTED
+---------------
+- Scanned ui/*.html for Suno/Lira/Lyria/music endpoint references; only Lyria
+  and the expected demo-music-preview references remain on current UI pages.
+- AST parse check passed for backend/routers/ai.py.
+
+WHAT WAS NOT TESTED
+-------------------
+- Did not click the Lyria generation button or call OpenRouter.
+- Did not restart the backend.
+- Did not manually verify the browser UI after refresh.
+
+WHAT COMES NEXT
+---------------
+1. Refresh /search.html and /vibe-search.html in the browser to confirm the
+   visible labels are updated.
+2. If Pablo wants a live music smoke test, click "Generate Lyria preview" only
+   when ready to spend a user-triggered OpenRouter call.
+
+SESSION 33 - Personal Demo Video Soundtrack Sync
+Date:    2026-04-30
+Agent:   OpenAI Codex
+
+WHAT WAS DONE
+-------------
+1. Updated the personalized class demo player:
+   - ui/personal-demo.html now stores the generated Lyria track URL.
+   - When the Seedance/OpenRouter video renders, the page attaches the Lyria
+     track to the video controls.
+   - Play, pause, seek, ended, and playback-rate events now sync the hidden
+     soundtrack audio with the visible video element.
+
+2. Updated the on-page copy:
+   - The music panel now tells the user the generated track will play in sync
+     with the video.
+   - The video panel now says to press play on the video; the Lyria soundtrack
+     starts with it.
+
+FILES CHANGED
+-------------
+- ui/personal-demo.html
+- Review at the start of each session and update at the end of each session.txt
+
+KEY DECISIONS
+-------------
+- Sync audio in the browser rather than muxing audio into the MP4. Reason:
+  Seedance returns a silent video file and client-side sync gives the class
+  demo the intended "music in the video" experience without adding ffmpeg,
+  background processing, storage, or another backend media pipeline.
+
+WHAT WAS TESTED
+---------------
+- Static scan confirmed the generated music source is captured and the video
+  player calls attachSoundtrackToVideo().
+
+WHAT WAS NOT TESTED
+-------------------
+- Did not generate a new Lyria clip or Seedance video.
+- Did not verify browser playback with a completed generated video.
+
+WHAT COMES NEXT
+---------------
+1. Hard-refresh /personal-demo.html on the running server.
+2. Generate/select a venue and play the completed video; the Lyria track should
+   start, pause, and seek with the video controls.
+
+SESSION 34 - Personal Demo Photo Requirement Guard
+Date:    2026-04-30
+Agent:   OpenAI Codex
+
+WHAT WAS DONE
+-------------
+1. Added a frontend guard before video generation:
+   - ui/personal-demo.html now checks that at least one performer photo has
+     been uploaded before calling POST /api/ai/demo-performance-video.
+   - If no photo is present, the page shows an inline instruction and scrolls
+     back to the Photos field instead of making a request that the backend will
+     reject.
+
+FILES CHANGED
+-------------
+- ui/personal-demo.html
+- Review at the start of each session and update at the end of each session.txt
+
+KEY DECISIONS
+-------------
+- Keep the backend requirement for at least one performer photo. Reason: the
+  class demo narrative starts with Pablo uploading photos, even though those
+  photos are intentionally not forwarded to Seedance while real-person image
+  moderation remains blocked.
+
+WHAT WAS TESTED
+---------------
+- Static inspection of the generateVideo() guard.
+
+WHAT WAS NOT TESTED
+-------------------
+- Did not submit a new Seedance/OpenRouter video job.
+
+WHAT COMES NEXT
+---------------
+1. Hard-refresh /personal-demo.html.
+2. Upload at least one performer photo before clicking Generate video.
+
+SESSION 35 - Lyria No-Audio Fallback
+Date:    2026-04-30
+Agent:   OpenAI Codex
+
+WHAT WAS DONE
+-------------
+1. Made POST /api/ai/demo-music-preview more demo-resilient:
+   - If Lyria/OpenRouter returns a text-only stream with no audio payload, the
+     endpoint now returns the static fallback soundtrack instead of a 502.
+   - The response still includes the generated prompt and marks generated=false
+     so the UI remains honest.
+
+FILES CHANGED
+-------------
+- backend/routers/ai.py
+- Review at the start of each session and update at the end of each session.txt
+
+KEY DECISIONS
+-------------
+- Prefer a fallback soundtrack over failing the music panel. Reason: the class
+  demo needs audio with the silent Seedance video, and Lyria preview behavior
+  can intermittently return text chunks without audio even when the request is
+  otherwise accepted.
+
+WHAT WAS TESTED
+---------------
+- Not yet tested live; change is a direct exception-path fallback.
+
+WHAT WAS NOT TESTED
+-------------------
+- Did not rerun Lyria/OpenRouter generation.
+- Did not restart the backend from Codex.
+
+WHAT COMES NEXT
+---------------
+1. Restart or let uvicorn reload pick up backend/routers/ai.py.
+2. Regenerate music if needed; the panel should now show fallback audio instead
+   of "Music request failed" when Lyria returns no audio.
+
+SESSION 36 - MP4 Soundtrack Mux Endpoint
+Date:    2026-04-30
+Agent:   OpenAI Codex
+
+WHAT WAS DONE
+-------------
+1. Added backend support for baking music into the generated video file:
+   - New POST /api/ai/demo-performance-video/mux endpoint accepts a completed
+     video URL plus audio_url or audio_data_url.
+   - The endpoint materializes local /assets paths, data URLs, or http(s) URLs,
+     runs ffmpeg, and returns a static /assets/generated/...mp4 URL.
+   - If ffmpeg is unavailable, the endpoint returns generated=false with an
+     actionable note instead of crashing.
+
+2. Updated the personalized demo UI:
+   - ui/personal-demo.html now calls the mux endpoint after both video and
+     music are ready.
+   - If muxing succeeds, the visible video player swaps to the muxed MP4.
+   - If muxing fails or ffmpeg is missing, the existing synced browser playback
+     remains available.
+
+3. Added configuration/docs:
+   - backend/config.py now supports FFMPEG_PATH.
+   - .env.example documents FFMPEG_PATH.
+   - README.md and TASKS.md describe the mux endpoint and ffmpeg dependency.
+
+FILES CHANGED
+-------------
+- backend/config.py
+- backend/models.py
+- backend/routers/ai.py
+- ui/personal-demo.html
+- ui/assets/generated/.gitkeep
+- .env.example
+- README.md
+- TASKS.md
+- Review at the start of each session and update at the end of each session.txt
+
+KEY DECISIONS
+-------------
+- Use ffmpeg as an optional system tool instead of adding a Python media
+  dependency. Reason: muxing is a native media operation; the app can still
+  demo via synced playback when ffmpeg is not installed.
+- Save muxed files under ui/assets/generated so the existing static mount can
+  serve them without adding a new file-serving route.
+
+WHAT WAS TESTED
+---------------
+- AST parse check passed for backend/routers/ai.py, backend/models.py, and
+  backend/config.py.
+- Imported backend.routers.ai and confirmed /demo-performance-video/mux is
+  registered on the router.
+- Directly invoked the mux endpoint with local fallback assets and confirmed it
+  returns the expected generated=false response when ffmpeg is not installed.
+
+WHAT WAS NOT TESTED
+-------------------
+- Did not run an actual ffmpeg mux because ffmpeg is not installed/on PATH on
+  this machine.
+- Did not restart the running localhost:8001 backend from Codex.
+- Did not submit new OpenRouter/Lyria/Seedance generation calls.
+
+WHAT COMES NEXT
+---------------
+1. Install ffmpeg or set FFMPEG_PATH to an ffmpeg.exe path.
+2. Restart the localhost:8001 backend so the new mux route is live.
+3. Re-run the personal demo; once music and video are ready, the page should
+   replace the synced player with a muxed MP4 if ffmpeg is available.
+
+SESSION 37 - Docs Consistency Pass for Video Soundtrack Mux
+Date:    2026-04-30
+Agent:   OpenAI Codex
+
+WHAT WAS DONE
+-------------
+1. Verified and normalized documentation for the new video soundtrack mux path:
+   - README.md now describes the mux behavior in the feature list, setup notes,
+     and project tree.
+   - TASKS.md now consistently says Lyria/fallback audio is browser-synced and
+     can be muxed into the MP4 via ffmpeg.
+   - AGENTS.md and CLAUDE.md now mention /api/ai/demo-performance-video/mux and
+     FFMPEG_PATH instead of only saying Lyria plays alongside/in parallel with
+     silent Seedance video.
+   - .env.example already includes FFMPEG_PATH and was re-checked.
+
+2. Updated SPEC.docx:
+   - Section 5 / MVP definition now says the class demo can mux the
+     Lyria/fallback soundtrack into the completed MP4 when ffmpeg is available.
+   - Section 8 / OpenRouter Video row now says Seedance remains silent, while
+     Lyria/fallback audio is browser-synced and optionally muxed into the final
+     MP4.
+
+FILES CHANGED
+-------------
+- README.md
+- TASKS.md
+- AGENTS.md
+- CLAUDE.md
+- SPEC.docx
+- Review at the start of each session and update at the end of each session.txt
+
+KEY DECISIONS
+-------------
+- Keep Seedance documented as silent with generate_audio=false. Reason:
+  ByteDance audio generation failed safety filtering during prior tests; muxing
+  Lyria/fallback audio after the video completes is the safer product path.
+- Keep ffmpeg optional in docs. Reason: the browser-synced playback remains the
+  fallback when ffmpeg is not installed or FFMPEG_PATH is unset.
+
+WHAT WAS TESTED
+---------------
+- Scanned README.md, TASKS.md, AGENTS.md, CLAUDE.md, .env.example,
+  ui/assets/v2/README.md, evals/README.md, and SPEC.docx for stale phrases
+  such as "plays alongside," "alongside the silent," and "in parallel."
+- Confirmed SPEC.docx contains ffmpeg/mux wording and no stale "plays
+  alongside the silent video" wording.
+- Rendered SPEC.docx with artifact-tool to .codex_docx_render_mux_verify and
+  visually inspected the contact sheet plus edited pages 3, 7, and 9.
+- AST parse check still passes for backend/config.py, backend/models.py, and
+  backend/routers/ai.py.
+
+WHAT WAS NOT TESTED
+-------------------
+- Did not install ffmpeg.
+- Did not run an actual mux.
+- Did not restart the localhost backend.
+
+WHAT COMES NEXT
+---------------
+1. Install ffmpeg or set FFMPEG_PATH to an existing ffmpeg.exe.
+2. Restart the localhost:8001 backend.
+3. Re-run the personal demo and confirm the muxed /assets/generated MP4 appears.
+
 ================================================================================
 END OF LOG
 ================================================================================

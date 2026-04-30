@@ -1,9 +1,20 @@
+import asyncio
+import base64
+import shutil
+import subprocess
+import uuid
+from pathlib import Path
+
+import httpx
 from fastapi import APIRouter, HTTPException
 
+from backend.config import settings
 from backend.database import get_db
 from backend.models import (
     BioGenerateRequest,
     DemoAssetResponse,
+    DemoMuxVideoRequest,
+    DemoMuxVideoResponse,
     DemoMusicPreviewRequest,
     DemoMusicPreviewResponse,
     DemoPerformanceVideoRequest,
@@ -35,6 +46,61 @@ from backend.services import (
 
 router = APIRouter()
 DEMO_ASSET_NOTE = "Demo asset; v2 will generate on demand."
+MUSIC_FALLBACK_URL = "/assets/v2/music-preview.mp3"
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+UI_DIR = PROJECT_ROOT / "ui"
+GENERATED_ASSET_DIR = UI_DIR / "assets" / "generated"
+
+
+def _dj_available_on(dj: DJListItem, event_date: str | None) -> bool:
+    if not event_date:
+        return True
+    return event_date in set(dj.availability or [])
+
+
+def _find_ffmpeg() -> str | None:
+    configured = (settings.FFMPEG_PATH or "ffmpeg").strip()
+    configured_path = Path(configured)
+    if configured_path.exists():
+        return str(configured_path)
+    return shutil.which(configured)
+
+
+def _resolve_static_asset(url_path: str) -> Path:
+    candidate = (UI_DIR / url_path.lstrip("/")).resolve()
+    ui_root = UI_DIR.resolve()
+    if candidate != ui_root and ui_root not in candidate.parents:
+        raise HTTPException(status_code=400, detail="Static asset path is outside the UI directory")
+    if not candidate.exists():
+        raise HTTPException(status_code=404, detail=f"Static asset '{url_path}' not found")
+    return candidate
+
+
+async def _materialize_media_source(source: str, destination: Path) -> None:
+    if source.startswith("data:"):
+        try:
+            _, payload = source.split(",", 1)
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail="Invalid data URL media source") from exc
+        destination.write_bytes(base64.b64decode(payload))
+        return
+
+    if source.startswith("/"):
+        shutil.copyfile(_resolve_static_asset(source), destination)
+        return
+
+    if source.startswith(("http://", "https://")):
+        async with httpx.AsyncClient(timeout=httpx.Timeout(90.0), follow_redirects=True) as client:
+            response = await client.get(source)
+            if response.status_code >= 400:
+                raise HTTPException(
+                    status_code=502,
+                    detail=f"Could not download media source ({response.status_code})",
+                )
+            destination.write_bytes(response.content)
+        return
+
+    raise HTTPException(status_code=400, detail="Media source must be a data URL, /assets path, or http(s) URL")
 
 
 async def _ensure_dj_exists(db, dj_id: str) -> None:
@@ -86,14 +152,28 @@ async def vibe_match(request: VibeMatchRequest):
     finally:
         await db.close()
 
+    candidate_djs = [dj for dj in all_djs.values() if _dj_available_on(dj, request.event_date)]
+    if request.event_date and not candidate_djs:
+        return VibeMatchResponse(
+            results=[],
+            query_interpretation=(
+                f"No DJs currently list availability on {request.event_date}. "
+                "Try another date or clear the event date filter."
+            ),
+        )
+
+    query = request.query
+    if request.event_date:
+        query = f"{request.query}\nEvent date: {request.event_date}. Only rank DJs available on this date."
+
     matches_raw, interpretation = vibe_matcher.match_djs(
-        request.query, list(all_djs.values())
+        query, candidate_djs
     )
 
     results = []
     for m in matches_raw:
         dj = all_djs.get(m.get("dj_id"))
-        if dj:
+        if dj and _dj_available_on(dj, request.event_date):
             results.append(
                 VibeMatchResult(
                     dj=dj,
@@ -140,7 +220,12 @@ async def generate_bio(request: BioGenerateRequest):
 
 @router.post("/promo-prompt")
 async def promo_prompt(request: PromoPromptRequest):
-    """Generate Suno music + ElevenLabs voice prompts for a DJ-venue pairing."""
+    """Generate provider-neutral music + voice-over prompts for a DJ-venue pairing.
+
+    Returns two strings the LLM can hand to whichever music and voice
+    services are wired in (Lyria 3 today; ElevenLabs is roadmap). The keys
+    `music_prompt` and `voice_script` are intentionally provider-neutral.
+    """
     db = await get_db()
     try:
         dj_rows = await db.execute_fetchall("SELECT * FROM djs WHERE id = ?", [request.dj_id])
@@ -156,11 +241,12 @@ async def promo_prompt(request: PromoPromptRequest):
 
     system = (
         "You are a creative director for NOCTURNE. Generate two things:\n"
-        "1. A Suno AI music generation prompt for a 30-second clip matching "
-        "this DJ's style at this venue.\n"
-        "2. An ElevenLabs voice-over script for a 15-second promo announcement.\n\n"
+        "1. A music-generation prompt (provider-neutral) for a 30-second clip "
+        "matching this DJ's style at this venue.\n"
+        "2. A voice-over script for a 15-second promo announcement (provider-"
+        "neutral; will be sent to a TTS service).\n\n"
         "Respond ONLY with JSON:\n"
-        '{"suno_prompt": "...", "elevenlabs_script": "..."}'
+        '{"music_prompt": "...", "voice_script": "..."}'
     )
     user_msg = (
         f"DJ: {dj.name} ({dj.tagline}), genres: {', '.join(dj.genres)}\n"
@@ -180,16 +266,21 @@ async def promo_prompt(request: PromoPromptRequest):
         return json.loads(cleaned)
     except (json.JSONDecodeError, TypeError):
         return {
-            "suno_prompt": f"Electronic music in the style of {dj.name} for {venue.name}.",
-            "elevenlabs_script": f"NOCTURNE presents {dj.name} at {venue.name}.",
+            "music_prompt": f"Electronic music in the style of {dj.name} for {venue.name}.",
+            "voice_script": f"NOCTURNE presents {dj.name} at {venue.name}.",
         }
 
 
-# ── Party Simulation (Higgsfield) ────────────────────────────────────────────
+# ── Party Simulation (text scene description) ────────────────────────────────
 
 @router.post("/party-simulation")
 async def party_simulation(request: PartySimulationRequest):
-    """Generate a Higgsfield video prompt for a DJ-venue party simulation."""
+    """Generate a provider-neutral video-prompt for a DJ-venue party simulation.
+
+    Produces a JSON video-prompt that downstream code can hand to whichever
+    video model is wired in (currently Seedance 2.0 via OpenRouter for the
+    personalized class demo; see `/api/ai/demo-performance-video`).
+    """
     db = await get_db()
     try:
         dj_rows = await db.execute_fetchall("SELECT * FROM djs WHERE id = ?", [request.dj_id])
@@ -306,27 +397,34 @@ async def demo_performance_video(request: DemoPerformanceVideoRequest):
             provider="openrouter/video",
             status="fallback",
             generated=False,
-            note="Demo asset; set OPENROUTER_API_KEY to generate a personalized OpenRouter video.",
+            note="Demo asset; live generation requires API credentials.",
         )
     if not request.image_data_urls:
         raise HTTPException(status_code=400, detail="Upload at least one performer image")
 
-    # Build input_references: venue scene first (so the model anchors on the
-    # room), then performer photos (for identity). Cap performer photos at 3
-    # so the venue image survives Seedance's 4-reference limit.
+    # Build input_references. NOTE: as of 2026-04-29, Seedance 2.0 (and most
+    # other major hosted video-gen models on OpenRouter — Veo 3.1, Sora 2,
+    # etc.) refuse images of real people with the upstream error
+    # "InputImageSensitiveContentDetected.PrivacyInformation: The request
+    # failed because the input image may contain real person." This blocks
+    # the personalized "performer's face in the video" beat at the model
+    # provider's content-moderation layer; it is not a prompt-engineering
+    # problem. Until a model with explicit consent flow is wired in, we
+    # send ONLY the venue image as a visual reference. The frontend still
+    # accepts performer photos (for UX continuity and future use) but they
+    # are intentionally NOT forwarded to Seedance. Tracked in SPEC §9.6.
     venue_image_url = (venue.image_url or "").strip()
-    performer_refs = request.image_data_urls[:3]
     input_references: list[str] = []
     if venue_image_url:
         input_references.append(venue_image_url)
-    input_references.extend(performer_refs)
+    # request.image_data_urls is intentionally not appended — see comment above.
 
     prompt = seedance_prompt.build_seedance_prompt(
         performer_name=request.performer_name,
         venue=venue,
         style_text=request.style,
         has_venue_ref=bool(venue_image_url),
-        performer_ref_count=len(performer_refs),
+        performer_ref_count=0,  # performer photos are blocked by Seedance moderation
     )
 
     try:
@@ -343,28 +441,78 @@ async def demo_performance_video(request: DemoPerformanceVideoRequest):
         polling_url=result.get("polling_url"),
         provider="openrouter/video",
         generated=False,
-        note="OpenRouter video job submitted. Poll this job until status is completed.",
+        note="Venue simulation queued; rendering now.",
     )
 
 
 @router.get("/demo-performance-video/{job_id}", response_model=DemoPerformanceVideoResponse)
 async def get_demo_performance_video(job_id: str):
-    """Poll an OpenRouter video job for the personalized demo."""
+    """Poll an OpenRouter video job for the personalized demo.
+
+    When the job is `completed`, OpenRouter only exposes the rendered MP4 at
+    `https://openrouter.ai/api/v1/videos/<job_id>/content?index=0`, which
+    requires the OpenRouter Bearer token. Browsers can't send that token, so a
+    raw `<video src="...openrouter...">` tag fails silently. We download the
+    MP4 server-side (with Bearer auth), cache it under
+    `ui/assets/generated/seedance-<job_id>.mp4`, and return the local URL so
+    the static mount can serve it without auth. Subsequent polls hit the
+    cached file.
+    """
     try:
         result = await openrouter_video_client.get_video_job(job_id)
     except openrouter_video_client.OpenRouterVideoError as exc:
         raise HTTPException(status_code=502, detail=str(exc)) from exc
 
+    status = result.get("status", "unknown")
     unsigned_urls = result.get("unsigned_urls") or []
-    video_url = unsigned_urls[0] if unsigned_urls else None
+    remote_url = (
+        result.get("video_url")
+        or (unsigned_urls[0] if unsigned_urls else None)
+    )
+
+    local_url: str | None = None
+    note = "Venue simulation status."
+
+    if status == "completed" and remote_url:
+        GENERATED_ASSET_DIR.mkdir(parents=True, exist_ok=True)
+        # Use job_id directly so re-polls land on the same cached file.
+        safe_id = "".join(ch for ch in job_id if ch.isalnum() or ch in ("-", "_"))
+        cached_path = GENERATED_ASSET_DIR / f"seedance-{safe_id}.mp4"
+        if not cached_path.exists() or cached_path.stat().st_size < 1024:
+            try:
+                headers: dict[str, str] = {}
+                if "openrouter.ai" in remote_url and settings.OPENROUTER_API_KEY:
+                    headers["Authorization"] = f"Bearer {settings.OPENROUTER_API_KEY}"
+                async with httpx.AsyncClient(
+                    timeout=httpx.Timeout(180.0), follow_redirects=True
+                ) as client:
+                    response = await client.get(remote_url, headers=headers)
+                    response.raise_for_status()
+                    cached_path.write_bytes(response.content)
+            except httpx.HTTPError as exc:
+                # Fall back to returning the remote URL — the browser still
+                # can't load it, but the eval / curl path keeps working.
+                note = f"Video completed but server-side download failed: {exc!s}"
+                return DemoPerformanceVideoResponse(
+                    job_id=result.get("id", job_id),
+                    status=status,
+                    polling_url=result.get("polling_url"),
+                    video_url=remote_url,
+                    provider="openrouter/video",
+                    generated=False,
+                    note=note,
+                )
+        local_url = f"/assets/generated/seedance-{safe_id}.mp4"
+        note = "Venue simulation ready."
+
     return DemoPerformanceVideoResponse(
         job_id=result.get("id", job_id),
-        status=result.get("status", "unknown"),
+        status=status,
         polling_url=result.get("polling_url"),
-        video_url=video_url,
+        video_url=local_url or remote_url,
         provider="openrouter/video",
-        generated=result.get("status") == "completed" and bool(video_url),
-        note="OpenRouter video job status.",
+        generated=bool(local_url),
+        note=note,
     )
 
 
@@ -391,17 +539,23 @@ async def demo_music_preview(request: DemoMusicPreviewRequest):
 
     if not lyria_client.is_configured():
         return DemoMusicPreviewResponse(
-            audio_url="/assets/v2/music-preview.mp3",
+            audio_url=MUSIC_FALLBACK_URL,
             prompt=prompt,
             provider="lyria-3-clip-preview",
             generated=False,
-            note="Demo asset; set OPENROUTER_API_KEY to generate a personalized Lyria clip.",
+            note="Demo asset; live generation requires API credentials.",
         )
 
     try:
         result = await lyria_client.generate_clip(prompt)
     except lyria_client.LyriaError as exc:
-        raise HTTPException(status_code=502, detail=str(exc)) from exc
+        return DemoMusicPreviewResponse(
+            audio_url=MUSIC_FALLBACK_URL,
+            prompt=prompt,
+            provider="lyria-3-clip-preview",
+            generated=False,
+            note="Live music generation produced no audio; using the fallback soundtrack.",
+        )
 
     audio_url = result.get("audio_url")
     audio_data_url = result.get("audio_data_url")
@@ -420,13 +574,87 @@ async def demo_music_preview(request: DemoMusicPreviewRequest):
         prompt=prompt,
         provider="lyria-3-clip-preview",
         generated=True,
-        note="Lyria 3 clip generated for the matched venue.",
+        note="Music preview ready.",
+    )
+
+
+@router.post("/demo-performance-video/mux", response_model=DemoMuxVideoResponse)
+async def mux_demo_performance_video(request: DemoMuxVideoRequest):
+    """Mux a completed silent video with the generated Lyria soundtrack."""
+    audio_source = request.audio_data_url or request.audio_url
+    if not audio_source:
+        raise HTTPException(status_code=400, detail="Provide audio_url or audio_data_url")
+
+    ffmpeg = _find_ffmpeg()
+    if not ffmpeg:
+        return DemoMuxVideoResponse(
+            provider="ffmpeg",
+            generated=False,
+            note=(
+                "ffmpeg is not installed or not on PATH. Set FFMPEG_PATH in .env "
+                "to enable exported MP4s with music baked in."
+            ),
+        )
+
+    GENERATED_ASSET_DIR.mkdir(parents=True, exist_ok=True)
+    run_id = uuid.uuid4().hex[:12]
+    work_dir = GENERATED_ASSET_DIR / f"mux-{run_id}"
+    work_dir.mkdir(parents=True, exist_ok=True)
+    video_input = work_dir / "video.mp4"
+    audio_input = work_dir / "audio.bin"
+    output_path = GENERATED_ASSET_DIR / f"performance-with-music-{run_id}.mp4"
+
+    try:
+        await _materialize_media_source(request.video_url, video_input)
+        await _materialize_media_source(audio_source, audio_input)
+
+        cmd = [
+            ffmpeg,
+            "-y",
+            "-i",
+            str(video_input),
+            "-i",
+            str(audio_input),
+            "-map",
+            "0:v:0",
+            "-map",
+            "1:a:0",
+            "-c:v",
+            "copy",
+            "-c:a",
+            "aac",
+            "-shortest",
+            "-movflags",
+            "+faststart",
+            str(output_path),
+        ]
+        completed = await asyncio.to_thread(
+            subprocess.run,
+            cmd,
+            capture_output=True,
+            text=True,
+            timeout=180,
+            check=False,
+        )
+        if completed.returncode != 0:
+            detail = (completed.stderr or completed.stdout or "ffmpeg failed").strip()[-800:]
+            raise HTTPException(status_code=502, detail=f"ffmpeg mux failed: {detail}")
+    except subprocess.TimeoutExpired as exc:
+        raise HTTPException(status_code=504, detail="ffmpeg mux timed out") from exc
+    finally:
+        shutil.rmtree(work_dir, ignore_errors=True)
+
+    return DemoMuxVideoResponse(
+        video_url=f"/assets/generated/{output_path.name}",
+        provider="ffmpeg",
+        generated=True,
+        note="Generated MP4 with the Lyria soundtrack muxed into the video file.",
     )
 
 
 @router.post("/music-preview", response_model=DemoAssetResponse)
 async def music_preview(request: MusicPreviewRequest):
-    """Return a canned Suno-style music preview asset for the class demo."""
+    """Return the canned music preview fallback asset for legacy callers."""
     db = await get_db()
     try:
         await _ensure_dj_exists(db, request.dj_id)
@@ -436,7 +664,7 @@ async def music_preview(request: MusicPreviewRequest):
 
     return DemoAssetResponse(
         audio_url="/assets/v2/music-preview.mp3",
-        provider="suno",
+        provider="lyria-3-clip-preview",
         generated=False,
         note=DEMO_ASSET_NOTE,
     )

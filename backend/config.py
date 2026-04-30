@@ -5,13 +5,14 @@ class Settings(BaseSettings):
     # LLM routing — OpenRouter (OpenAI-compatible API; routes to any model)
     OPENROUTER_API_KEY: str = ""
     OPENROUTER_BASE_URL: str = "https://openrouter.ai/api/v1"
-    OPENROUTER_MODEL: str = "meta-llama/llama-3.3-70b-instruct:free"
+    OPENROUTER_MODEL: str = "openai/gpt-oss-120b:free"
     OPENROUTER_VIDEO_MODEL: str = "bytedance/seedance-2.0"
     OPENROUTER_VIDEO_RESOLUTION: str = "720p"
     OPENROUTER_VIDEO_DURATION: int = 10
     OPENROUTER_VIDEO_ASPECT_RATIO: str = "16:9"
     OPENROUTER_MUSIC_MODEL: str = "google/lyria-3-clip-preview"
     OPENROUTER_AUDIO_MODEL: str = "google/gemini-2.5-flash"
+    FFMPEG_PATH: str = "ffmpeg"
 
     # Legacy / unused (kept so old .env files don't fail validation)
     ANTHROPIC_API_KEY: str = ""

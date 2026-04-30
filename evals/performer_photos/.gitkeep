@@ -1,0 +1,5 @@
+# Performer photos for the §9.6 Seedance Video Output eval (and any other
+# eval that needs an Identity Sheet). Drop 2-3 JPG/PNG/WEBP files here and
+# pass them to evals/seedance_video_eval.py via --photos.
+#
+# Files themselves are gitignored — only this .gitkeep ships.

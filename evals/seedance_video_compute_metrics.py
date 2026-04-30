@@ -182,6 +182,8 @@ def main() -> int:
         f.write("- Protocol: evals/README.md (Seedance Video Output eval section)\n")
         f.write("- Handbook citations on the per-dimension table map each rubric item back to\n")
         f.write("  a Seedance 2.0 AI Handbook principle.\n")
+        f.write("- Current provider constraint: real-person image references are blocked, so\n")
+        f.write("  identity_preservation is rated as neutral 3 for comparability.\n")
         f.write("- Sample size is small (one video per chosen venue, single rater); composite\n")
         f.write("  and pass rate are point estimates, not statistically significant.\n")
 

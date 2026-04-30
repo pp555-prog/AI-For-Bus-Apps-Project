@@ -6,3 +6,7 @@ httpx==0.28.*
 pydantic==2.*
 pydantic-settings==2.*
 python-dotenv==1.*
+# Image resize for the §9.6 Seedance Video Output eval (auto-resize performer
+# photos to ~1024 px before encoding; OpenRouter video endpoint silently
+# drops requests with multi-MB data URLs).
+Pillow>=10,<13

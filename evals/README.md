@@ -217,7 +217,7 @@ venue + 2 performer references) and runs 15 checks:
 | **Lighting vocabulary** | At least one of: rim light, key light, fill light, backlight, soft/hard light, haze, golden hour, silhouette | p.16 |
 | **Constraint vocabulary** | At least one of: avoid, maintain, preserve, limit, emphasize, exclude, frame, restrict, highlight | p.16 |
 | **No banned anti-pattern phrases** | "premium editorial", "expressive crowd", "cinematic atmosphere" used as standalone style modifiers, etc. | p.14 |
-| **One dominant camera move** | The Camera: section names ≤1 primary move verb (no "dolly + pan + zoom" stacks) | p.4 principle 2; p.14 anti-pattern |
+| **Camera structure (mode-aware)** | Auto-detects Single-Shot vs Multi-Shot from the prompt. Single-Shot: Camera section names ≤1 primary move verb (handbook anti-pattern: "too many camera moves"). Multi-Shot: requires explicit `Beat 1` / `Beat 2` / `Beat 3` markers (Establish → Develop → Payoff). The current shipped prompt is Multi-Shot. | p.4 #2, p.8, p.14 |
 
 ## Running
 
@@ -256,9 +256,11 @@ rubric. The pair answers two related questions:
 ## Design
 
 For N chosen venues:
-1. Submit one Seedance job per venue with: the venue's `image_url` as
-   `input_references[0]` (Environment Sheet) and 1-3 of your performer
-   photos as `input_references[1+]` (Identity Sheet).
+1. Submit one Seedance job per venue with the venue's `image_url` as
+   `input_references[0]` (Environment Sheet). The frontend / eval CLI also
+   accepts performer photos for UX continuity, but the backend deliberately
+   does NOT forward them to Seedance — see "Known limitations" below for
+   the real-person content moderation policy that drives this.
 2. Poll each job to completion (~140 s each).
 3. Download the rendered MP4 to `evals/seedance_outputs/<venue_id>.mp4`.
 4. Watch each clip and score it 1-5 on five handbook-aligned dimensions
@@ -273,10 +275,10 @@ Cost: N × ~$1.51 (Seedance 2.0 720p / 10 s).
 
 | Dimension | What you're rating (1-5) | Handbook reference |
 |---|---|---|
-| `identity_preservation` | Does the DJ in the video look like your performer photos? | p.9 — Image Reference role: "identity, wardrobe, palette" |
+| `identity_preservation` | **Rate `3` neutral on every row.** Not testable under SPEC §9.6 — performer photos are blocked by content moderation, so the rendered DJ is a generic stand-in. See "Known limitations" below. | p.9 — Image Reference role: "identity, wardrobe, palette" |
 | `venue_fidelity` | Does the venue in the video match the seeded `image_url`? | p.5 principle 4 — "environment is active, not wallpaper" |
 | `action_clarity` | Is there ONE clear, readable action throughout? | p.4 principle 1 — "one shot = one dominant readable action" |
-| `camera_coherence` | Is the camera move coherent and singular (not erratic)? | p.4 principle 2 — "camera is not decoration" |
+| `camera_coherence` | Is the camera move coherent? Single-shot prompts: one move. Multi-shot prompts: per-beat moves should each read clean and link smoothly. | p.4 principle 2 — "camera is not decoration"; p.8 (Multi-Shot Mode) |
 | `behavioral_realism` | Does the DJ's behavior look physically grounded (not AI-uncanny)? | p.4 principle 3 — "action must be physical" |
 | `constraints_violated_yn` | Any text overlays, logos, captions, celebrity drift? | p.16 — constraint vocabulary; p.14 anti-pattern |
 
@@ -324,6 +326,36 @@ into SPEC §9.6.
 | `seedance_video_eval.py` | Stage 1 runner: submits + polls + downloads videos |
 | `seedance_video_compute_metrics.py` | Stage 3 metrics (rubric → composite + pass rate) |
 | `seedance_outputs/` | Rendered MP4s (gitignored — large files; .gitkeep ships) |
+| `performer_photos/` | Performer photos used as eval inputs (gitignored; .gitkeep ships) |
 | `seedance_video_results_full.csv` | (generated) per-job submit/poll/download status + prompt + cost |
 | `seedance_video_rate_me.csv` | (generated) blank rubric sheet |
 | `seedance_video_metrics.md` | (generated) headline rubric report |
+
+## Known limitations (discovered 2026-04-29 first run)
+
+The first end-to-end §9.6 run produced 3/3 videos but surfaced two real-world
+constraints that anyone re-running this eval should know up front:
+
+1. **Real-person photos are blocked by content moderation.** Seedance 2.0,
+   Veo 3.1, and Sora 2 all reject `input_references` containing identifiable
+   people with the upstream error
+   `"InputImageSensitiveContentDetected.PrivacyInformation"`. The harness
+   uploads performer photos for UX continuity but the backend's
+   `demo_performance_video` endpoint deliberately drops them before calling
+   OpenRouter — only the seeded `venue.image_url` goes through. As a result,
+   the rendered DJ is a generic stand-in figure, not the actual presenter.
+   The `identity_preservation` rubric dimension is **N/A** under this
+   constraint and should be rated `3` (neutral) on every row when filling
+   in `seedance_video_rate_me.csv`. This is documented as a finding in
+   SPEC §9.6.
+
+2. **Data-URL size limit.** OpenRouter video silently returns `id: null`
+   for image payloads above ~2 MB (200 OK, no actual job started). The
+   eval auto-resizes any photo larger than 1024 px on its long edge to a
+   JPEG quality 85 via Pillow before base64-encoding. `Pillow>=10` is in
+   `requirements.txt`. If Pillow isn't installed, the eval falls back to
+   raw bytes and prints a warning — submissions over the limit will still
+   silently fail. To install:
+   ```bash
+   .\.venv\Scripts\python.exe -m pip install Pillow
+   ```

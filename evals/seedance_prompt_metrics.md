@@ -16,11 +16,11 @@ Source: canned stand-in venues; 3 venues tested.
 - ✅ section: Sound
 - ✅ section: Style
 - ✅ asset roles use R1/R2+ + Sheet terminology
-- ✅ camera vocabulary present — matched: ['dolly', 'shallow focus', 'close-up', 'medium close-up']
+- ✅ camera vocabulary present — matched: ['dolly', 'handheld']
 - ✅ lighting vocabulary present — matched: ['rim light', 'key light', 'silhouette', 'haze']
-- ✅ constraint vocabulary present — matched: ['avoid', 'preserve']
+- ✅ constraint vocabulary present — matched: ['avoid', 'preserve', 'frame', 'highlight']
 - ✅ no banned anti-pattern phrases
-- ✅ camera: one dominant move — primary moves found: ['dolly']
+- ✅ camera structure (multi-shot: Establish/Develop/Payoff beats) — beats present: ['1', '2', '3']
 
 ### the-nest — ✅ PASS (15/15)
 
@@ -34,11 +34,11 @@ Source: canned stand-in venues; 3 venues tested.
 - ✅ section: Sound
 - ✅ section: Style
 - ✅ asset roles use R1/R2+ + Sheet terminology
-- ✅ camera vocabulary present — matched: ['dolly', 'shallow focus', 'close-up', 'medium close-up']
+- ✅ camera vocabulary present — matched: ['dolly', 'handheld']
 - ✅ lighting vocabulary present — matched: ['rim light', 'key light', 'silhouette', 'haze']
-- ✅ constraint vocabulary present — matched: ['avoid', 'preserve']
+- ✅ constraint vocabulary present — matched: ['avoid', 'preserve', 'frame', 'highlight']
 - ✅ no banned anti-pattern phrases
-- ✅ camera: one dominant move — primary moves found: ['dolly']
+- ✅ camera structure (multi-shot: Establish/Develop/Payoff beats) — beats present: ['1', '2', '3']
 
 ### amnesia-ibiza — ✅ PASS (15/15)
 
@@ -52,11 +52,11 @@ Source: canned stand-in venues; 3 venues tested.
 - ✅ section: Sound
 - ✅ section: Style
 - ✅ asset roles use R1/R2+ + Sheet terminology
-- ✅ camera vocabulary present — matched: ['dolly', 'shallow focus', 'close-up', 'medium close-up']
+- ✅ camera vocabulary present — matched: ['dolly', 'handheld']
 - ✅ lighting vocabulary present — matched: ['rim light', 'key light', 'silhouette', 'haze']
-- ✅ constraint vocabulary present — matched: ['avoid', 'preserve']
+- ✅ constraint vocabulary present — matched: ['avoid', 'preserve', 'frame', 'highlight']
 - ✅ no banned anti-pattern phrases
-- ✅ camera: one dominant move — primary moves found: ['dolly']
+- ✅ camera structure (multi-shot: Establish/Develop/Payoff beats) — beats present: ['1', '2', '3']
 
 ## Summary
 

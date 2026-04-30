@@ -29,7 +29,7 @@ Workflow:
        report.
 
 Rubric (handbook-aligned, all 1-5 unless noted):
-    - identity_preservation: does the DJ look like the performer photos? (handbook p.9 Image Reference role)
+    - identity_preservation: rate 3 neutral; real-person references are blocked (SPEC §9.6)
     - venue_fidelity: does the venue look like the venue reference? (handbook p.4 principle 4: environment is active)
     - action_clarity: is there ONE clear readable action? (handbook p.4 principle 1)
     - camera_coherence: is the camera move coherent and singular? (handbook p.4 principle 2)
@@ -41,6 +41,7 @@ from __future__ import annotations
 import argparse
 import base64
 import csv
+import json
 import os
 import pathlib
 import sys
@@ -74,14 +75,50 @@ def read_openrouter_key() -> str | None:
     return None
 
 
-def encode_image(path: Path) -> str:
-    ext = path.suffix.lower().lstrip(".")
-    mime_map = {"jpg": "jpeg", "jpeg": "jpeg", "png": "png", "webp": "webp"}
-    mime = mime_map.get(ext, "jpeg")
+def encode_image(path: Path, max_dim: int = 1024, quality: int = 85) -> str:
+    """Encode an image as a JPEG data URL, resizing to <= max_dim on the long edge.
+
+    OpenRouter's video endpoint accepts data URLs but appears to silently fail
+    when the request body is large (multi-MB photos send back a 200 with
+    `id: null`, no polling URL). Resizing to ~1024 px JPEG quality 85 keeps
+    each data URL under ~250 KB. Performer photos are not forwarded by the
+    backend under the current real-person image moderation constraint, but the
+    resize path is kept for reproducible eval inputs and future provider paths.
+    """
     if not path.exists():
         raise FileNotFoundError(path)
-    b64 = base64.b64encode(path.read_bytes()).decode()
-    return f"data:image/{mime};base64,{b64}"
+    try:
+        from io import BytesIO
+
+        from PIL import Image
+    except ImportError:
+        # Fallback: ship the raw bytes. Caller should expect failures on
+        # large photos; install Pillow for the resize path.
+        ext = path.suffix.lower().lstrip(".")
+        mime_map = {"jpg": "jpeg", "jpeg": "jpeg", "png": "png", "webp": "webp"}
+        mime = mime_map.get(ext, "jpeg")
+        b64 = base64.b64encode(path.read_bytes()).decode()
+        print(f"  WARNING: Pillow not installed; sending {path.name} unresized "
+              f"({len(b64)*3//4//1024} KB raw, {len(b64)//1024} KB base64). "
+              f"Install with: .\\.venv\\Scripts\\pip.exe install Pillow")
+        return f"data:image/{mime};base64,{b64}"
+
+    img = Image.open(path)
+    orig_size = img.size
+    if img.mode != "RGB":
+        img = img.convert("RGB")
+    w, h = img.size
+    if max(w, h) > max_dim:
+        ratio = max_dim / max(w, h)
+        img = img.resize((int(w * ratio), int(h * ratio)), Image.LANCZOS)
+    buf = BytesIO()
+    img.save(buf, format="JPEG", quality=quality, optimize=True)
+    raw_bytes = buf.getvalue()
+    b64 = base64.b64encode(raw_bytes).decode()
+    print(f"  encoded {path.name}: {orig_size[0]}x{orig_size[1]} -> "
+          f"{img.size[0]}x{img.size[1]}, {len(raw_bytes)//1024} KB JPEG, "
+          f"{len(b64)//1024} KB base64")
+    return f"data:image/jpeg;base64,{b64}"
 
 
 def fetch_venues(client: httpx.Client, api: str) -> list[dict]:
@@ -92,7 +129,18 @@ def fetch_venues(client: httpx.Client, api: str) -> list[dict]:
 
 def submit_video(client: httpx.Client, api: str, body: dict) -> dict:
     r = client.post(f"{api}/api/ai/demo-performance-video", json=body, timeout=60)
-    r.raise_for_status()
+    if r.status_code >= 400:
+        # Surface the upstream error body — when the backend wraps an
+        # OpenRouter failure as a 502, the actual upstream message lives in
+        # `detail` and that's what we need to debug.
+        try:
+            detail = r.json().get("detail", r.text)
+        except Exception:
+            detail = r.text
+        raise httpx.HTTPStatusError(
+            f"HTTP {r.status_code}: {str(detail)[:600]}",
+            request=r.request, response=r,
+        )
     return r.json()
 
 
@@ -102,7 +150,13 @@ def poll_video(client: httpx.Client, api: str, job_id: str) -> dict:
     return r.json()
 
 
-def download_video(url: str, dest: Path, openrouter_key: str | None) -> None:
+def download_video(url: str, dest: Path, openrouter_key: str | None, api_base: str = DEFAULT_API) -> None:
+    # As of 2026-04-30 the backend's polling endpoint downloads the OpenRouter
+    # MP4 server-side and returns a local path like /assets/generated/...mp4
+    # so the browser can play it without Bearer auth. For the eval that
+    # local path needs to be turned into a full URL via the configured API base.
+    if url.startswith("/"):
+        url = f"{api_base.rstrip('/')}{url}"
     headers = {}
     if "openrouter.ai" in url and openrouter_key:
         headers["Authorization"] = f"Bearer {openrouter_key}"
@@ -203,6 +257,19 @@ def main() -> int:
                 continue
 
             job_id = submit_resp.get("job_id") or ""
+            if not job_id:
+                # Surface the raw response so we can diagnose why no job_id came back
+                # (fallback path? OpenRouter content moderation? unexpected response shape?)
+                print("  WARNING: submit returned no job_id. Full response:")
+                print(f"    {json.dumps(submit_resp, indent=2, default=str)[:800]}")
+                full_rows.append({
+                    "pair_id": pair_id, "venue_id": vid, "venue_name": vname,
+                    "status": submit_resp.get("status", "no_job_id"),
+                    "error": "submit returned no job_id; raw response: "
+                             + json.dumps(submit_resp, default=str)[:400],
+                    "job_id": "", "video_path": "",
+                })
+                continue
             print(f"  job_id={job_id}, polling every {POLL_INTERVAL}s (max {MAX_POLLS} polls)...")
 
             final: dict | None = None
@@ -252,7 +319,7 @@ def main() -> int:
 
             dest = OUTPUT_DIR / f"{vid}.mp4"
             try:
-                download_video(video_url, dest, openrouter_key)
+                download_video(video_url, dest, openrouter_key, args.api)
                 size_kb = dest.stat().st_size // 1024
                 print(f"  downloaded -> {dest} ({size_kb} KB)")
             except Exception as e:
@@ -302,10 +369,14 @@ def main() -> int:
     print("\nNEXT STEPS:")
     print(f"  1. Watch each MP4 in {OUTPUT_DIR.relative_to(PROJECT_ROOT)}/")
     print(f"  2. Open {RATE_ME.name} and fill in the rubric columns:")
-    print("       identity_preservation     1-5 (1=different person, 5=clearly the same)")
+    print("       identity_preservation     RATE 3 NEUTRAL ON ALL ROWS — N/A under SPEC §9.6:")
+    print("                                 hosted video models block real-person photos")
+    print("                                 ('InputImageSensitiveContentDetected.PrivacyInformation'),")
+    print("                                 so the rendered DJ is a generic stand-in by design.")
     print("       venue_fidelity            1-5 (1=generic club, 5=clearly the same room as the venue ref)")
     print("       action_clarity            1-5 (1=chaotic/multiple actions, 5=single dominant action)")
-    print("       camera_coherence          1-5 (1=erratic/multiple moves, 5=single smooth move)")
+    print("       camera_coherence          1-5 (1=erratic/multiple moves, 5=single smooth move; for")
+    print("                                 Multi-Shot prompts, score the per-beat camera moves as a unit)")
     print("       behavioral_realism        1-5 (1=AI-uncanny/wrong hands, 5=natural physical performance)")
     print("       constraints_violated_yn   yes/no (text, logos, captions, celebrity drift?)")
     print(f"  3. Run: python evals/seedance_video_compute_metrics.py")

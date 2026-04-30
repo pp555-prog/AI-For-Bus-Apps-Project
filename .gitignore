@@ -56,6 +56,13 @@ evals/seedance_video_results_full.csv
 evals/seedance_video_rate_me.csv
 evals/seedance_video_metrics.md
 
+# Performer photos for the §9.6 eval (Identity Sheet); personal images
+evals/performer_photos/*
+!evals/performer_photos/.gitkeep
+
+# Generated demo media (Seedance / Lyria downloads from the live demo)
+ui/assets/generated/
+
 # OS
 .DS_Store
 Thumbs.db

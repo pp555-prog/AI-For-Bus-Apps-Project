@@ -1,15 +1,22 @@
 """
-NOCTURNE AI Evaluation — Stage 1: collect Claude's top-3 matches per venue.
+NOCTURNE AI Evaluation — Stage 1: collect the LLM matcher's top-3 picks per venue.
+
+Routed through OpenRouter via `backend/services/llm_client.py`. The LLM in
+use is whatever `OPENROUTER_MODEL` is set to in `.env` (default
+`openai/gpt-oss-120b:free`).
 
 Usage:
     1. Make sure the backend is running (python run.py).
-    2. Make sure ANTHROPIC_API_KEY is set in .env.
+    2. Make sure OPENROUTER_API_KEY is set in .env.
     3. Run:  .\\.venv\\Scripts\\python.exe evals\\run_eval.py
 
 Outputs:
-    evals/results_full.csv — every (venue, DJ) pair Claude returned in its
-                             top-3, plus its score and reasoning. Used by
-                             compute_metrics.py later.
+    evals/results_full.csv — every (venue, DJ) pair the matcher returned in
+                             its top-3, plus its score and reasoning. Used
+                             by compute_metrics.py later. NOTE: the score /
+                             reasoning columns are still named `claude_*`
+                             for historical reasons (the matcher used to be
+                             Claude); see evals/README.md naming note.
     evals/rate_me.csv      — same pairs but with a blank `human_rating`
                              column. YOU fill this in (1-5 relevance).
                              To keep ratings honest, hide the
@@ -27,8 +34,9 @@ from pathlib import Path
 import httpx
 
 API_BASE = "http://localhost:8000"
-TOP_N = 3            # how many of Claude's matches to record per venue
-TIMEOUT_S = 60.0     # Claude calls can be slow on cold start
+TOP_N = 3            # how many top matches to record per venue
+TIMEOUT_S = 60.0     # OpenRouter calls can be slow on cold start
+
 
 EVALS_DIR = Path(__file__).resolve().parent
 RESULTS_FULL = EVALS_DIR / "results_full.csv"
@@ -47,7 +55,7 @@ def print_vibe_match_error(context: str, exc: Exception) -> None:
         if detail:
             print(f"  Response: {detail}")
         if response.status_code == 503:
-            print("  Most likely cause: ANTHROPIC_API_KEY is missing or invalid in .env.")
+            print("  Most likely cause: OPENROUTER_API_KEY is missing or invalid in .env.")
 
 
 def venue_to_query(venue: dict) -> str:
@@ -129,11 +137,11 @@ def health_check(client: httpx.Client) -> None:
         if not matches:
             print("ERROR: vibe-match health check returned no matches.")
             print("Most likely cause: backend is running but /api/ai/vibe-match is not returning usable results.")
-            print("Check ANTHROPIC_API_KEY in .env and the backend logs.")
+            print("Check OPENROUTER_API_KEY in .env and the backend logs.")
             sys.exit(1)
     except Exception as e:
         print_vibe_match_error("vibe-match health check failed", e)
-        print("Most likely causes: backend not running, ANTHROPIC_API_KEY missing, or /api/ai/vibe-match returning 503.")
+        print("Most likely causes: backend not running, OPENROUTER_API_KEY missing, or /api/ai/vibe-match returning 503.")
         sys.exit(1)
 
 
@@ -155,7 +163,7 @@ def main() -> None:
             venue_name = v.get("name", venue_id)
             query = venue_to_query(v)
 
-            print(f"\n[{venue_name}] querying Claude...")
+            print(f"\n[{venue_name}] querying matcher...")
             try:
                 resp = call_vibe_match(client, query)
             except Exception as e:
@@ -206,7 +214,7 @@ def main() -> None:
         print("\nERROR: eval collected 0 rows; CSV files were not written.")
         print("Most likely causes:")
         print(f"  - Backend is not running at {API_BASE}")
-        print("  - ANTHROPIC_API_KEY is missing or invalid in .env")
+        print("  - OPENROUTER_API_KEY is missing or invalid in .env")
         print("  - POST /api/ai/vibe-match is returning 503 or no usable matches")
         print("Start the backend, confirm /api/ai/vibe-match works, then re-run:")
         print("  .\\.venv\\Scripts\\python.exe evals\\run_eval.py")

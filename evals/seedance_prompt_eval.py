@@ -145,24 +145,52 @@ def check_no_banned_phrases(prompt: str) -> CheckResult:
     )
 
 
-def check_one_camera_move(prompt: str) -> CheckResult:
-    """Heuristic: Camera section should describe ONE dominant move, not many.
+def check_camera_structure(prompt: str) -> CheckResult:
+    """Validate camera structure based on the prompt's mode.
 
-    We look at the Camera: line and count distinct primary camera-move verbs
-    (handbook says one). Allowing the move + a focus/close-up qualifier is OK.
+    The handbook recognizes two relevant modes for our use case (p.6, p.7, p.8):
+
+    - **Single-Shot Mode** (p.7): one continuous take, one dominant camera
+      move. Anti-pattern (p.14): "too many camera moves". We check that
+      the Camera section names ≤1 primary move verb.
+
+    - **Multi-Shot Mode** (p.8): three linked beats — Establish → Develop
+      → Payoff. Each beat carries its own dominant camera move; multiple
+      moves across beats is *correct*, not an anti-pattern. We instead
+      check that all three beats are explicitly named.
+
+    Mode is auto-detected by looking for "Beat 1" / "Beat 2" / "Beat 3"
+    markers anywhere in the prompt.
     """
+    is_multi_shot = bool(
+        re.search(r"\bBeat 1\b", prompt)
+        and re.search(r"\bBeat 2\b", prompt)
+        and re.search(r"\bBeat 3\b", prompt)
+    )
+    if is_multi_shot:
+        beats = sorted(set(re.findall(r"\bBeat (\d)\b", prompt)))
+        passed = beats == ["1", "2", "3"]
+        return CheckResult(
+            name="camera structure (multi-shot: Establish/Develop/Payoff beats)",
+            passed=passed,
+            detail=f"beats present: {beats}",
+        )
     m = re.search(r"Camera:\s*(.+?)(?:\.\s|$)", prompt)
     if not m:
-        return CheckResult(name="camera: one dominant move", passed=False, detail="no Camera: section")
+        return CheckResult(name="camera: one dominant move (single-shot)", passed=False, detail="no Camera: section")
     seg = m.group(1).lower()
     primary_moves = ["dolly", "track", "crane", "pan", "tilt", "zoom", "handheld"]
     hits = [v for v in primary_moves if v in seg]
     passed = len(hits) <= 1
     return CheckResult(
-        name="camera: one dominant move",
+        name="camera: one dominant move (single-shot)",
         passed=passed,
         detail=f"primary moves found: {hits}",
     )
+
+
+# Backward-compatible alias for any external callers.
+check_one_camera_move = check_camera_structure
 
 
 # ── Venue sources ──────────────────────────────────────────────────────────
@@ -209,7 +237,7 @@ def run_checks_on(prompt: str) -> list[CheckResult]:
     results.append(check_vocabulary(prompt, "lighting", LIGHTING_VOCAB))
     results.append(check_vocabulary(prompt, "constraint", CONSTRAINT_VOCAB))
     results.append(check_no_banned_phrases(prompt))
-    results.append(check_one_camera_move(prompt))
+    results.append(check_camera_structure(prompt))
     return results
 
 

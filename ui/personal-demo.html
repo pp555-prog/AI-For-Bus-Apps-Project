@@ -36,7 +36,7 @@
         <p class="text-xs font-bold uppercase tracking-[0.35em] text-gold">NOCTURNE live demo</p>
         <h1 class="mt-5 font-headline text-5xl font-extrabold leading-tight md:text-6xl">Book yourself into the room.</h1>
         <p class="mt-5 max-w-xl text-base leading-7 text-muted">
-          Upload performer photos, describe your DJ style, let NOCTURNE match you to a venue, then submit an OpenRouter video job showing you playing there.
+          Upload performer photos, describe your DJ style, let NOCTURNE match you to a venue, then render a venue simulation showing you playing there.
         </p>
       </div>
 
@@ -93,7 +93,7 @@
 
       <div id="musicPanel" class="hidden rounded-xl border border-gold/40 bg-panel p-6">
         <p class="text-xs font-bold uppercase tracking-[0.3em] text-gold">Generated venue track</p>
-        <h2 id="musicTitle" class="mt-2 font-headline text-3xl font-bold">Composing with Lyria 3</h2>
+        <h2 id="musicTitle" class="mt-2 font-headline text-3xl font-bold">Composing your venue track</h2>
         <p id="musicNote" class="mt-3 text-sm leading-6 text-muted"></p>
         <p id="musicPrompt" class="mt-3 hidden rounded-lg border border-line/60 bg-background px-3 py-2 text-xs leading-5 text-muted"></p>
         <div id="musicOutput" class="mt-5"></div>
@@ -101,7 +101,7 @@
 
       <div id="videoPanel" class="hidden rounded-xl border border-gold/40 bg-panel p-6">
         <p class="text-xs font-bold uppercase tracking-[0.3em] text-gold">Generated performance video</p>
-        <h2 id="videoTitle" class="mt-2 font-headline text-3xl font-bold">Waiting for OpenRouter</h2>
+        <h2 id="videoTitle" class="mt-2 font-headline text-3xl font-bold">Preparing your venue simulation</h2>
         <p id="videoNote" class="mt-3 text-sm leading-6 text-muted"></p>
         <div id="videoOutput" class="mt-5"></div>
       </div>
@@ -113,6 +113,12 @@
     let imageDataUrls = [];
     let audioDataUrl = null;
     let selectedVenue = null;
+    let generatedMusicSrc = null;
+    let generatedVideoSrc = null;
+    let renderedVideoEl = null;
+    let syncedSoundtrackEl = null;
+    let muxInProgress = false;
+    let muxedVideoSrc = null;
 
     const statusEl = document.getElementById("status");
     const previewEl = document.getElementById("imagePreview");
@@ -321,8 +327,8 @@
       if (!selectedVenue) return;
 
       musicPanel.classList.remove("hidden");
-      musicTitle.textContent = "Composing with Lyria 3";
-      musicNote.textContent = "Lyria 3 generates a ~30s instrumental for the matched venue. Hang on while OpenRouter renders the clip.";
+      musicTitle.textContent = "Composing your venue track";
+      musicNote.textContent = "Generating a ~30s instrumental tailored to the matched venue. This usually takes a few seconds.";
       musicPromptEl.classList.add("hidden");
       musicPromptEl.textContent = "";
       musicOutput.innerHTML = "";
@@ -342,20 +348,27 @@
       const data = await response.json();
       if (!response.ok) {
         musicTitle.textContent = "Music request failed";
-        musicNote.textContent = data.detail || "Lyria could not generate the clip.";
+        musicNote.textContent = data.detail || "Live music generation could not start.";
         return;
       }
 
-      musicTitle.textContent = data.generated ? "Lyria-generated venue track" : "Demo music asset";
+      musicTitle.textContent = data.generated ? "Your venue track" : "Demo music asset";
       musicNote.textContent = data.note || "";
       if (data.prompt) {
         musicPromptEl.textContent = "Prompt: " + data.prompt;
         musicPromptEl.classList.remove("hidden");
       }
-      const src = data.audio_url || data.audio_data_url;
+      const src = data.audio_data_url || data.audio_url;
       if (src) {
-        musicOutput.innerHTML = `<audio class="w-full" controls preload="auto" src="${src}"></audio>`;
+        generatedMusicSrc = src;
+        musicOutput.innerHTML = `
+          <audio class="w-full" controls preload="auto" src="${src}"></audio>
+          <p class="mt-3 text-xs leading-5 text-muted">This track will play in sync when the generated video is played.</p>
+        `;
+        attachSoundtrackToVideo();
+        muxVideoWithSoundtrack();
       } else {
+        generatedMusicSrc = null;
         musicOutput.innerHTML = "";
       }
     }
@@ -402,7 +415,15 @@
       if (!selectedVenue) return;
 
       videoPanel.classList.remove("hidden");
-      videoTitle.textContent = "Submitting OpenRouter video job";
+      if (!imageDataUrls.length) {
+        videoTitle.textContent = "Add a performer photo first";
+        videoNote.textContent = "Upload at least one photo in the Photos field, then click Generate video again for this venue.";
+        videoOutput.innerHTML = "";
+        document.getElementById("performerImages").scrollIntoView({behavior: "smooth", block: "center"});
+        return;
+      }
+
+      videoTitle.textContent = "Submitting venue simulation";
       videoNote.textContent = "This may take a few minutes. Keep this tab open while NOCTURNE polls the job.";
       videoOutput.innerHTML = "";
 
@@ -414,7 +435,7 @@
       const data = await response.json();
       if (!response.ok) {
         videoTitle.textContent = "Video request failed";
-        videoNote.textContent = data.detail || "OpenRouter could not start the video job.";
+        videoNote.textContent = data.detail || "We could not start the venue simulation.";
         return;
       }
       if (data.video_url && !data.job_id) {
@@ -437,7 +458,7 @@
         const data = await response.json();
         if (!response.ok) {
           videoTitle.textContent = "Polling failed";
-          videoNote.textContent = data.detail || "Could not poll OpenRouter video status.";
+          videoNote.textContent = data.detail || "Could not check the simulation status.";
           return;
         }
         if (data.status === "completed" && data.video_url) {
@@ -446,10 +467,10 @@
         }
         if (data.status === "failed") {
           videoTitle.textContent = "Video generation failed";
-          videoNote.textContent = data.note || "OpenRouter marked the job failed.";
+          videoNote.textContent = data.note || "Generation failed; please retry.";
           return;
         }
-        videoNote.textContent = `OpenRouter status: ${data.status}`;
+        videoNote.textContent = `Status: ${data.status}`;
       }
       videoTitle.textContent = "Still generating";
       videoNote.textContent = "The job is still running. Refresh the API docs or retry polling with the job id.";
@@ -457,8 +478,96 @@
 
     function renderVideo(data) {
       videoTitle.textContent = "Your venue simulation is ready";
-      videoNote.textContent = data.note || "Generated by OpenRouter video.";
-      videoOutput.innerHTML = `<video class="w-full rounded-xl border border-line bg-black" controls playsinline src="${data.video_url}"></video>`;
+      generatedVideoSrc = data.video_url;
+      videoNote.textContent = generatedMusicSrc
+        ? "Press play on the video; the soundtrack will start with it."
+        : (data.note || "Your venue simulation is ready.");
+      videoOutput.innerHTML = `
+        <video id="performanceVideo" class="w-full rounded-xl border border-line bg-black" controls playsinline preload="metadata" src="${data.video_url}"></video>
+        <p id="soundtrackSyncNote" class="mt-3 text-xs leading-5 text-muted">
+          ${generatedMusicSrc ? "Soundtrack linked to video controls." : "Waiting for the soundtrack; it will attach when ready."}
+        </p>
+      `;
+      renderedVideoEl = document.getElementById("performanceVideo");
+      attachSoundtrackToVideo();
+      muxVideoWithSoundtrack();
+    }
+
+    function attachSoundtrackToVideo() {
+      if (!renderedVideoEl || !generatedMusicSrc) return;
+      const syncNote = document.getElementById("soundtrackSyncNote");
+      syncedSoundtrackEl?.pause();
+      syncedSoundtrackEl = new Audio(generatedMusicSrc);
+      syncedSoundtrackEl.preload = "auto";
+
+      const syncAudioTime = () => {
+        if (!syncedSoundtrackEl) return;
+        if (Number.isFinite(renderedVideoEl.currentTime)) {
+          syncedSoundtrackEl.currentTime = renderedVideoEl.currentTime;
+        }
+      };
+
+      renderedVideoEl.addEventListener("play", async () => {
+        if (!syncedSoundtrackEl) return;
+        syncAudioTime();
+        syncedSoundtrackEl.playbackRate = renderedVideoEl.playbackRate || 1;
+        try {
+          await syncedSoundtrackEl.play();
+          if (syncNote) syncNote.textContent = "Soundtrack playing with the video.";
+        } catch {
+          if (syncNote) syncNote.textContent = "Press play once more if the browser blocks soundtrack autoplay.";
+        }
+      });
+      renderedVideoEl.addEventListener("pause", () => syncedSoundtrackEl?.pause());
+      renderedVideoEl.addEventListener("ended", () => {
+        if (!syncedSoundtrackEl) return;
+        syncedSoundtrackEl.pause();
+        syncedSoundtrackEl.currentTime = 0;
+      });
+      renderedVideoEl.addEventListener("seeked", syncAudioTime);
+      renderedVideoEl.addEventListener("ratechange", () => {
+        if (syncedSoundtrackEl) syncedSoundtrackEl.playbackRate = renderedVideoEl.playbackRate || 1;
+      });
+
+      if (syncNote) syncNote.textContent = "Soundtrack linked to video controls.";
+    }
+
+    async function muxVideoWithSoundtrack() {
+      if (!generatedVideoSrc || !generatedMusicSrc || muxInProgress || muxedVideoSrc) return;
+      muxInProgress = true;
+      const syncNote = document.getElementById("soundtrackSyncNote");
+      if (syncNote) syncNote.textContent = "Baking the soundtrack into the MP4...";
+
+      const body = {video_url: generatedVideoSrc};
+      if (generatedMusicSrc.startsWith("data:")) body.audio_data_url = generatedMusicSrc;
+      else body.audio_url = generatedMusicSrc;
+
+      try {
+        const response = await fetch(`${API}/api/ai/demo-performance-video/mux`, {
+          method: "POST",
+          headers: {"Content-Type": "application/json"},
+          body: JSON.stringify(body)
+        });
+        const data = await response.json();
+        if (!response.ok || !data.generated || !data.video_url) {
+          if (syncNote) syncNote.textContent = data.detail || data.note || "Could not bake audio into the MP4; synced playback is still available.";
+          return;
+        }
+
+        muxedVideoSrc = data.video_url;
+        syncedSoundtrackEl?.pause();
+        if (renderedVideoEl) {
+          renderedVideoEl.pause();
+          renderedVideoEl.src = muxedVideoSrc;
+          renderedVideoEl.load();
+        }
+        videoNote.textContent = data.note || "This MP4 now includes the generated soundtrack.";
+        if (syncNote) syncNote.textContent = "Soundtrack baked into the video file. Press play on the video.";
+      } catch (err) {
+        if (syncNote) syncNote.textContent = "Could not bake audio into the MP4; synced playback is still available.";
+      } finally {
+        muxInProgress = false;
+      }
     }
   </script>
 </body>

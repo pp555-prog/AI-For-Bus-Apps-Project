@@ -1,9 +1,9 @@
 """LLM client for NOCTURNE.
 
 Routes single-turn completions through OpenRouter using the OpenAI SDK.
-The active model is set via OPENROUTER_MODEL in .env (default: a free
-Llama tier). To switch providers (Claude, Gemini, GPT, DeepSeek, etc.),
-change OPENROUTER_MODEL — no code change required.
+The active model is set via OPENROUTER_MODEL in .env (default:
+openai/gpt-oss-120b:free). To switch providers (Claude, Gemini, GPT,
+DeepSeek, Llama, etc.), change OPENROUTER_MODEL — no code change required.
 """
 
 from openai import OpenAI

@@ -145,14 +145,14 @@
 <div class="space-y-6 rounded-2xl border border-primary/20 bg-surface-container-low/60 p-6">
 <div class="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
 <div>
-<span class="inline-flex w-fit items-center rounded-full border border-primary/30 px-3 py-1 text-[10px] font-label uppercase tracking-widest text-primary">Coming in v2</span>
+<span class="inline-flex w-fit items-center rounded-full border border-primary/30 px-3 py-1 text-[10px] font-label uppercase tracking-widest text-primary">Live demo preview</span>
 <h2 class="mt-4 text-3xl font-headline font-bold text-on-surface">Preview the night before it exists</h2>
-<p class="mt-2 text-sm text-on-surface-variant">OpenRouter video powers the personalized class demo; music and voice remain demo previews.</p>
+<p class="mt-2 text-sm text-on-surface-variant">Lyria 3 generates venue-tailored music; OpenRouter video powers the personalized class demo. Voice remains a roadmap preview.</p>
 </div>
 </div>
 <div class="grid grid-cols-1 lg:grid-cols-3 gap-3">
 <button class="v2-demo-btn rounded-lg bg-primary px-4 py-4 text-xs font-bold uppercase tracking-widest text-on-primary transition hover:opacity-90" data-demo-kind="music" type="button">
-Generate music preview
+Generate Lyria preview
 </button>
 <button class="v2-demo-btn rounded-lg border border-primary/50 px-4 py-4 text-xs font-bold uppercase tracking-widest text-primary transition hover:bg-primary/10" data-demo-kind="video" type="button">
 Watch party simulation
@@ -230,7 +230,7 @@ Hear DJ voice intro
 <!-- Availability Calendar -->
 <div class="space-y-8">
 <h2 class="text-3xl font-headline font-bold">Booking Horizon</h2>
-<div class="grid grid-cols-7 gap-2">
+<div id="availabilityCalendar" class="grid grid-cols-7 gap-2">
 <div class="text-center text-[10px] uppercase tracking-tighter text-outline font-label mb-2">Mon</div>
 <div class="text-center text-[10px] uppercase tracking-tighter text-outline font-label mb-2">Tue</div>
 <div class="text-center text-[10px] uppercase tracking-tighter text-outline font-label mb-2">Wed</div>
@@ -256,13 +256,14 @@ Hear DJ voice intro
 <div class="flex items-center gap-6 text-xs font-label">
 <div class="flex items-center gap-2">
 <div class="w-3 h-3 bg-primary/20 border border-primary/40 rounded-sm"></div>
-<span class="text-on-surface-variant">Confirmed Performance</span>
+<span class="text-on-surface-variant">Available for Booking</span>
 </div>
 <div class="flex items-center gap-2">
 <div class="w-3 h-3 bg-surface-container-highest/60 rounded-sm"></div>
-<span class="text-on-surface-variant">Available for Booking</span>
+<span class="text-on-surface-variant">Unavailable</span>
 </div>
 </div>
+<p id="availabilityStatus" class="text-xs text-on-surface-variant font-body"></p>
 </div>
 </section>
 </main>
@@ -281,6 +282,8 @@ Hear DJ voice intro
 const API = '';
 const djId = new URLSearchParams(location.search).get('dj') || 'aelxis-vox';
 let demoVenueId = null;
+let activeDj = null;
+let activeAvailability = [];
 
 // Fix nav links
 document.querySelectorAll('nav a').forEach(a => {
@@ -323,8 +326,8 @@ function renderDemoAsset(kind, data) {
     return;
   }
 
-  const label = kind === 'music' ? 'Suno music preview' : 'ElevenLabs DJ voice intro';
-  const url = data.audio_url;
+  const label = kind === 'music' ? 'Lyria 3 music preview' : 'ElevenLabs DJ voice intro';
+  const url = data.audio_data_url || data.audio_url;
   output.innerHTML = `
     <div class="rounded-xl border border-outline-variant/30 bg-surface-container-lowest p-4">
       <p class="mb-3 text-[10px] uppercase tracking-widest text-primary">${label}</p>
@@ -336,7 +339,7 @@ function renderDemoAsset(kind, data) {
 
 async function runV2Demo(kind) {
   const endpoints = {
-    music: '/api/ai/music-preview',
+    music: '/api/ai/demo-music-preview',
     video: '/api/ai/party-simulation-video',
     voice: '/api/ai/dj-voice-intro'
   };
@@ -349,8 +352,17 @@ async function runV2Demo(kind) {
     return;
   }
 
-  setDemoStatus('Preparing demo asset...');
-  const body = needsVenue ? { dj_id: djId, venue_id: demoVenueId } : { dj_id: djId };
+  setDemoStatus(kind === 'music' ? 'Composing Lyria preview...' : 'Preparing demo asset...');
+  const djStyle = [
+    activeDj?.tagline,
+    ...(activeDj?.genres || []),
+    ...(activeDj?.vibe_keywords || [])
+  ].filter(Boolean).join(', ') || 'club-ready electronic set';
+  const body = kind === 'music'
+    ? { performer_name: activeDj?.name || djId, style: djStyle, venue_id: demoVenueId }
+    : needsVenue
+      ? { dj_id: djId, venue_id: demoVenueId }
+      : { dj_id: djId };
 
   try {
     const response = await fetch(`${API}${endpoints[kind]}`, {
@@ -375,12 +387,75 @@ document.querySelectorAll('.v2-demo-btn').forEach(button => {
   button.addEventListener('click', () => runV2Demo(button.dataset.demoKind));
 });
 
+function formatDateLocal(date) {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+}
+
+function renderAvailabilityCalendar() {
+  const calendar = document.getElementById('availabilityCalendar');
+  if (!calendar) return;
+  const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+  const today = new Date();
+  const start = new Date(today.getFullYear(), today.getMonth(), 1);
+  const cells = days.map(day =>
+    `<div class="text-center text-[10px] uppercase tracking-tighter text-outline font-label mb-2">${day}</div>`
+  );
+  for (let i = 0; i < 35; i++) {
+    const date = new Date(start);
+    date.setDate(start.getDate() + i);
+    const iso = formatDateLocal(date);
+    const isAvailable = activeAvailability.includes(iso);
+    const classes = isAvailable
+      ? 'bg-primary/20 border border-primary/40 text-primary font-bold'
+      : 'bg-surface-container-highest/60 text-on-surface hover:border-primary/40 border border-transparent';
+    cells.push(`
+      <button data-date="${iso}" class="aspect-square ${classes} rounded flex items-center justify-center text-xs transition-colors" title="${iso}">
+        ${String(date.getDate()).padStart(2, '0')}
+      </button>
+    `);
+  }
+  calendar.innerHTML = cells.join('');
+  calendar.querySelectorAll('button[data-date]').forEach(button => {
+    button.addEventListener('click', () => toggleAvailability(button.dataset.date));
+  });
+}
+
+async function toggleAvailability(date) {
+  if (!activeDj || !date) return;
+  const status = document.getElementById('availabilityStatus');
+  const dates = new Set(activeAvailability);
+  if (dates.has(date)) dates.delete(date);
+  else dates.add(date);
+  const nextAvailability = Array.from(dates).sort();
+  if (status) status.textContent = 'Saving availability...';
+  try {
+    const response = await fetch(`${API}/api/djs/${activeDj.id}/availability`, {
+      method: 'PATCH',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({availability: nextAvailability})
+    });
+    const updated = await response.json();
+    if (!response.ok) throw new Error(updated.detail || 'Could not save availability');
+    activeDj = updated;
+    activeAvailability = updated.availability || [];
+    renderAvailabilityCalendar();
+    if (status) status.textContent = `Availability updated for ${date}.`;
+  } catch (err) {
+    if (status) status.textContent = err.message || 'Could not save availability.';
+  }
+}
+
 loadDemoVenue();
 
 // Load DJ profile
 fetch(`${API}/api/djs/${djId}`)
   .then(r => { if (!r.ok) throw new Error('Not found'); return r.json(); })
   .then(dj => {
+    activeDj = dj;
+    activeAvailability = dj.availability || [];
     // Update DJ name overlay
     const nameEl = document.querySelector('.text-7xl, .text-8xl');
     if (nameEl) {
@@ -418,16 +493,8 @@ fetch(`${API}/api/djs/${djId}`)
       });
     }
 
-    // Update availability calendar — highlight booked dates
-    if (dj.availability && dj.availability.length) {
-      const bookedDays = dj.availability.map(d => parseInt(d.split('-')[2]));
-      document.querySelectorAll('.grid.grid-cols-7 .aspect-square').forEach(cell => {
-        const day = parseInt(cell.textContent.trim());
-        if (bookedDays.includes(day)) {
-          cell.className = 'aspect-square bg-primary/20 border border-primary/40 rounded flex items-center justify-center text-xs text-primary font-bold';
-        }
-      });
-    }
+    // Update availability calendar — click a date to make it bookable/unbookable
+    renderAvailabilityCalendar();
 
     // Update soundcloud link text
     if (dj.soundcloud_url) {

@@ -21,12 +21,18 @@ These are working in the deployed product.
 - [x] **LLM party-simulation text** — `POST /api/ai/party-simulation` produces scene descriptions
 - [x] **Audio-driven venue matching** — `POST /api/ai/demo-venue-match` accepts an optional uploaded audio clip; frontend trims to 30s mono 16 kHz WAV; OpenRouter `google/gemini-2.5-flash` returns a structured style read; the LLM venue matcher (`vibe_matcher.match_venues`) ranks venues with reasoning using the augmented style
 - [x] **Audio-match eval harness (SPEC §9.4)** — `evals/audio_match_eval.py` + `audio_compute_metrics.py` run a paired T vs T+A comparison on the demo-venue-match endpoint (one audio clip per seeded venue, neutral typed style as the control). Eval runs are pending audio sample collection
-- [x] **Seedance prompt-structure eval (SPEC §9.5)** — `evals/seedance_prompt_eval.py` is a deterministic linter that verifies the rendered Seedance video prompt follows the Seedance 2.0 AI Handbook. 15 checks per venue (Single-Shot Skeleton sections, asset roles, vocabulary categories, banned anti-patterns, single dominant camera move). Costs $0, runs in milliseconds, exits non-zero on regression. Currently passing 3/3 canned venues.
-- [x] **Seedance video output eval harness (SPEC §9.6)** — `evals/seedance_video_eval.py` + `seedance_video_compute_metrics.py` run real Seedance generations with uploaded performer photos, download the MP4s, and score them on a 5-dimension handbook-aligned rubric (identity preservation / venue fidelity / action clarity / camera coherence / behavioral realism) + a yes/no constraints check. Targets composite ≥ 4.0 and pass rate ≥ 70%. Cost: N × ~$1.51 per Seedance run. Eval runs are pending photo upload + human rating.
+- [x] **Seedance prompt-structure eval (SPEC §9.5)** — `evals/seedance_prompt_eval.py` is a deterministic linter that verifies the rendered Seedance video prompt follows the Seedance 2.0 AI Handbook. 15 checks per venue: Single-Shot Skeleton sections (p.7), asset roles (p.5), camera/lighting/constraint vocabulary (p.16), banned anti-patterns (p.14), and a mode-aware camera-structure check that auto-detects Single-Shot (one dominant move) vs Multi-Shot (three Establish/Develop/Payoff beats per p.8). Costs $0, runs in milliseconds, exits non-zero on regression. Currently passing 3/3 canned venues under the Multi-Shot prompt shipped 2026-04-30.
+- [x] **Seedance video output eval harness (SPEC §9.6)** — `evals/seedance_video_eval.py` + `seedance_video_compute_metrics.py` run real Seedance generations conditioned on the seeded venue image, download the MP4s, and score them on a 5-dimension handbook-aligned rubric (identity preservation / venue fidelity / action clarity / camera coherence / behavioral realism) + a yes/no constraints check. Targets composite ≥ 4.0 and pass rate ≥ 70%. Cost: N × ~$1.51 per Seedance run. First end-to-end run completed 2026-04-29 (3/3 videos generated and downloaded for berghain-berlin / the-nest / amnesia-ibiza); rubric ratings pending. Photos are uploaded but not forwarded to Seedance — see "Known limitations" below.
+
+#### Known limitations of §9.6 (documented in SPEC §9.6 + AGENTS.md)
+
+- **Real-person photos blocked at submit time.** Seedance 2.0, Veo 3.1, and Sora 2 all refuse `input_references` containing identifiable people via the `"InputImageSensitiveContentDetected.PrivacyInformation"` policy. Backend therefore sends only the venue image_url; the rendered DJ is a generic stand-in. The `identity_preservation` rubric dimension is N/A under this constraint and is scored as neutral `3` for comparability.
+- **Data URL size limit.** OpenRouter video silently returns `id: null` for image payloads above ~2 MB. Eval auto-resizes photos to ≤1024 px JPEG via Pillow (`Pillow>=10` is in `requirements.txt`).
 - [x] **Lyria 3 music previews** — `POST /api/ai/demo-music-preview` generates a ~30s instrumental clip per matched venue via OpenRouter (`google/lyria-3-clip-preview`; preview pricing currently $0/call, published ~$0.04/clip when GA). Streaming + `modalities:["text","audio"]` required.
-- [x] **Personalized OpenRouter video** — `POST /api/ai/demo-performance-video` + polling endpoint generate a Seedance 2.0 reference-video from the matched venue's photo + uploaded performer photos (default 720p/10s silent, `generate_audio: false`, ~$1.51 per clip, ~140 s wall-clock). The Lyria clip plays as the soundtrack alongside the silent video.
-  - Venue image goes into `input_references` slot 1 so Seedance anchors on the actual room (architecture, lighting, scale); performer photos fill slots 2–4 for identity. The system prompt explicitly tells the model which references are venue vs performer.
+- [x] **Personalized OpenRouter video** — `POST /api/ai/demo-performance-video` + polling endpoint generate a Seedance 2.0 reference-video conditioned on the matched venue's photo (default 720p/10s silent, `generate_audio: false`, ~$1.51 per clip, ~140 s wall-clock). The Lyria/fallback clip is synced in the browser and can be muxed into the final MP4 via ffmpeg. The shipped prompt is **Multi-Shot** (Establish → Develop → Payoff afterparty arc per Seedance 2.0 Handbook p.8).
+  - **Venue image only** goes into `input_references`. Performer photos are accepted by the frontend for UX continuity but the backend does NOT forward them to Seedance — see the §9.6 Known Limitations below for the moderation policy that blocks real-person photos.
   - Currently uses the single `Venue.image_url` field. A multi-image upgrade (`Venue.image_urls: list[str]`, JSON-typed column matching the `genres` / `vibe_keywords` pattern, 2–3 photos per venue) is a natural follow-up.
+- [x] **Video soundtrack mux** — `POST /api/ai/demo-performance-video/mux` combines a completed silent Seedance MP4 with the Lyria/fallback soundtrack via `ffmpeg`, returning `/assets/generated/...mp4`; `/personal-demo.html` still falls back to synced browser playback if `ffmpeg` is unavailable.
 - [x] **SQLite + auto-seed** — 10 DJs / 7 venues / 3 bookings seeded on first run
 
 ---
@@ -70,9 +76,10 @@ These are scoped for v1 but not yet in the product.
 
 ### DJ availability — beyond static dates
 
-- [ ] **Calendar input UI** — DJ profile editor lets them block/unblock dates
+- [x] **Calendar input UI** — DJ profile page lets dates be toggled as bookable/unbookable in the Booking Horizon calendar
 - [ ] **Availability storage** — replace the seed's static availability strings with real date ranges
-- [ ] **Match filter** — `vibe-match` honors availability when a date is supplied in the query
+  - Current implementation keeps the existing JSON-as-TEXT exact-date list and adds a PATCH endpoint to update it; date-range semantics are still a follow-up.
+- [x] **Match filter** — `vibe-match` honors availability when `event_date` is supplied in the request body
 
 ---
 
@@ -108,10 +115,11 @@ Documented in SPEC §8 with `[v2]` tags. Build only after v1 is complete.
 - [x] **Choose provider** based on output quality + API access (see SPEC OQ-3)
   - Selected OpenRouter Video to keep AI generation behind the existing OpenRouter account/key.
 - [x] **Video API integration** → `backend/services/openrouter_video_client.py` (silent — `generate_audio: false`)
-- [x] **Endpoint** `POST /api/ai/demo-performance-video` — submits an async OpenRouter video job using uploaded performer reference images and selected venue context
+- [x] **Endpoint** `POST /api/ai/demo-performance-video` — submits an async OpenRouter video job using selected venue context and the venue image reference; performer images are accepted by the UI but not forwarded under the current real-person image moderation constraint
 - [x] **UI: video player** on `/personal-demo.html` (the personalized class demo). Standalone DJ-profile / match-preview integration on the main marketplace pages still pending.
 - [x] **Async job pattern** — videos take ~140s to generate; return a job id and poll
   - `GET /api/ai/demo-performance-video/{job_id}` polls the OpenRouter video job and returns the completed video URL when ready.
+- [x] **Mux generated audio into MP4** — `POST /api/ai/demo-performance-video/mux` uses `ffmpeg` to bake Lyria/fallback audio into the completed video file when available.
 
 ### ElevenLabs — voice synthesis
 
