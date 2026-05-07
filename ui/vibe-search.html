@@ -107,7 +107,7 @@
 </div>
 </nav>
 <main class="flex flex-col md:flex-row min-h-screen pt-20">
-<!-- Left: Sticky Cinematic Video (OpenRouter Video Simulation Style) -->
+<!-- Left: Sticky Cinematic Video Simulation -->
 <section class="relative w-full md:w-1/2 md:h-[calc(100vh-80px)] md:sticky md:top-20 overflow-hidden">
 <div class="absolute inset-0 bg-gradient-to-t from-background via-transparent to-transparent z-10"></div>
 <img alt="DJ Performing" class="w-full h-full object-cover scale-110" data-alt="Cinematic wide shot of a DJ performing at a large festival, vibrant golden lighting, immersive crowd atmosphere, high energy" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDNjbb0O6diyoOmpaFWEoBALIXCWgpxdP5AswCbGAd6bOpzqmKPxt8gpsW4qHi3Jo_Kn0NRSAzaoqpaJf_lbE2i0TKvCygCZrMHDHB2sSDN-nHCnq6lQvo4Viqj2e6KAQotpCRo6zNhxbz5EUzPV8o8ZigQ49Z42wz6r3mS-sJhNO0Rqc0TPTXpGheQOKrLuyX6ZoB31vOMWGvkJQt31xPQtsSDZVsxNUU-LPsaKgNpE3v2PUdfcWXSQNz2cUy7ezuZGIY_pQ-rK6g"/>
@@ -147,12 +147,12 @@
 <div>
 <span class="inline-flex w-fit items-center rounded-full border border-primary/30 px-3 py-1 text-[10px] font-label uppercase tracking-widest text-primary">Live demo preview</span>
 <h2 class="mt-4 text-3xl font-headline font-bold text-on-surface">Preview the night before it exists</h2>
-<p class="mt-2 text-sm text-on-surface-variant">Lyria 3 generates venue-tailored music; OpenRouter video powers the personalized class demo. Voice remains a roadmap preview.</p>
+<p class="mt-2 text-sm text-on-surface-variant">Venue-tailored AI music previews and a personalized video simulation; voice remains a roadmap preview.</p>
 </div>
 </div>
 <div class="grid grid-cols-1 lg:grid-cols-3 gap-3">
 <button class="v2-demo-btn rounded-lg bg-primary px-4 py-4 text-xs font-bold uppercase tracking-widest text-on-primary transition hover:opacity-90" data-demo-kind="music" type="button">
-Generate Lyria preview
+Generate music preview
 </button>
 <button class="v2-demo-btn rounded-lg border border-primary/50 px-4 py-4 text-xs font-bold uppercase tracking-widest text-primary transition hover:bg-primary/10" data-demo-kind="video" type="button">
 Watch party simulation
@@ -326,7 +326,7 @@ function renderDemoAsset(kind, data) {
     return;
   }
 
-  const label = kind === 'music' ? 'Lyria 3 music preview' : 'ElevenLabs DJ voice intro';
+  const label = kind === 'music' ? 'Music preview' : 'DJ voice intro';
   const url = data.audio_data_url || data.audio_url;
   output.innerHTML = `
     <div class="rounded-xl border border-outline-variant/30 bg-surface-container-lowest p-4">
@@ -352,7 +352,7 @@ async function runV2Demo(kind) {
     return;
   }
 
-  setDemoStatus(kind === 'music' ? 'Composing Lyria preview...' : 'Preparing demo asset...');
+  setDemoStatus(kind === 'music' ? 'Composing music preview...' : 'Preparing demo asset...');
   const djStyle = [
     activeDj?.tagline,
     ...(activeDj?.genres || []),

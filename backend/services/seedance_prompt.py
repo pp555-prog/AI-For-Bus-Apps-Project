@@ -66,9 +66,16 @@ def build_seedance_prompt(
     if performer_ref_count > 0:
         slot = 2 if has_venue_ref else 1
         plural = "+" if performer_ref_count > 1 else ""
+        # Wardrobe-first wording handles both face+body shots and garment-only
+        # uploads (flat lay, mannequin, hanger). When face/hair are visible the
+        # model preserves them; when they are not, render a plausible adult.
+        # Either way, the wardrobe shown in the references must persist across
+        # all three beats. The "Identity Sheet" string is preserved for the
+        # §9.5 prompt-structure linter.
         refs_lines.append(
-            f"R{slot}{plural} = Identity Sheet ({performer_name}): use only for "
-            "face, build, hair, and clothing across all three beats. Do not redesign the performer."
+            f"R{slot}{plural} = Identity Sheet ({performer_name}): use these references for "
+            "wardrobe (clothing, fabric, color palette, silhouette) across all three beats; "
+            "if face/hair are visible in the references preserve them as well."
         )
     asset_roles = " ".join(refs_lines) or "References: identity only."
 
@@ -90,19 +97,21 @@ def build_seedance_prompt(
             "energy escalates Beat 1 -> Beat 3. "
         )
 
-    # Identity handling. WITH photos: lock the rendered face to the references
-    # (handbook p.9). WITHOUT photos (current default; Seedance content
-    # moderation blocks real-person photos — see SPEC §9.6): let the model
-    # render a plausible generic adult DJ.
+    # Identity handling. WITH references: anchor wardrobe to the Identity Sheet
+    # (handbook p.9). The phrasing covers both face+body uploads and the more
+    # common garment-only path (flat lay / mannequin / hanger) introduced
+    # 2026-05-01 to dodge the PrivacyInformation moderation filter. WITHOUT
+    # references: let the model render a plausible generic adult DJ.
     has_identity_sheet = performer_ref_count > 0
     if has_identity_sheet:
         subject_line = (
-            f"Subject: {performer_name}, a DJ performing live, identity locked to the Identity Sheet "
+            f"Subject: {performer_name}, a DJ performing live, wardrobe anchored to the Identity Sheet "
             "references; the venue and crowd are the second protagonist. "
         )
         identity_constraint = (
-            f"Preserve {performer_name}'s exact face, hair, and clothing from the Identity Sheet "
-            "across all three beats. "
+            "Preserve the wardrobe (clothing, fabric, palette, silhouette) shown on the Identity Sheet "
+            "across all three beats. If face/hair appear in the references preserve them; otherwise "
+            "render a single, consistent, plausible adult DJ. "
         )
     else:
         subject_line = (

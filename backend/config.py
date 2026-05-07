@@ -12,6 +12,7 @@ class Settings(BaseSettings):
     OPENROUTER_VIDEO_ASPECT_RATIO: str = "16:9"
     OPENROUTER_MUSIC_MODEL: str = "google/lyria-3-clip-preview"
     OPENROUTER_AUDIO_MODEL: str = "google/gemini-2.5-flash"
+    OPENROUTER_VISION_MODEL: str = "google/gemini-2.5-flash"
     FFMPEG_PATH: str = "ffmpeg"
 
     # Legacy / unused (kept so old .env files don't fail validation)

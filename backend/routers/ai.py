@@ -36,6 +36,7 @@ from backend.models import (
 )
 from backend.services import (
     audio_analyzer,
+    garment_analyzer,
     llm_client,
     lyria_client,
     openrouter_video_client,
@@ -46,7 +47,7 @@ from backend.services import (
 
 router = APIRouter()
 DEMO_ASSET_NOTE = "Demo asset; v2 will generate on demand."
-MUSIC_FALLBACK_URL = "/assets/v2/music-preview.mp3"
+MUSIC_FALLBACK_URL = "/assets/v2/music-preview.wav"
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 UI_DIR = PROJECT_ROOT / "ui"
 GENERATED_ASSET_DIR = UI_DIR / "assets" / "generated"
@@ -103,6 +104,48 @@ async def _materialize_media_source(source: str, destination: Path) -> None:
     raise HTTPException(status_code=400, detail="Media source must be a data URL, /assets path, or http(s) URL")
 
 
+def _resize_data_url_for_seedance(data_url: str, max_dim: int = 1024, quality: int = 85) -> str:
+    """Resize an image data URL so it fits Seedance's ~2 MB silent-drop limit.
+
+    Mirrors `evals/seedance_video_eval.py:encode_image` but operates on a base64
+    data URL coming from the browser instead of a file path. OpenRouter video
+    silently returns `id: null` for image payloads above ~2 MB; re-encoding to
+    JPEG quality 85 at max_dim=1024 keeps each reference well under 250 KB.
+
+    Returns the resized data URL, or the original if Pillow is unavailable or
+    the input cannot be parsed (defensive — caller still gets a valid string).
+    """
+    if not data_url or not data_url.startswith("data:"):
+        return data_url
+    try:
+        from io import BytesIO
+
+        from PIL import Image
+    except ImportError:
+        return data_url
+
+    try:
+        _, payload = data_url.split(",", 1)
+        raw = base64.b64decode(payload)
+    except (ValueError, base64.binascii.Error):
+        return data_url
+
+    try:
+        img = Image.open(BytesIO(raw))
+        if img.mode in ("RGBA", "LA", "P"):
+            img = img.convert("RGB")
+        w, h = img.size
+        if max(w, h) > max_dim:
+            ratio = max_dim / max(w, h)
+            img = img.resize((int(w * ratio), int(h * ratio)), Image.LANCZOS)
+        buf = BytesIO()
+        img.save(buf, format="JPEG", quality=quality, optimize=True)
+        new_b64 = base64.b64encode(buf.getvalue()).decode()
+        return f"data:image/jpeg;base64,{new_b64}"
+    except Exception:
+        return data_url
+
+
 async def _ensure_dj_exists(db, dj_id: str) -> None:
     rows = await db.execute_fetchall("SELECT id FROM djs WHERE id = ?", [dj_id])
     if not rows:
@@ -138,6 +181,42 @@ def _venue_match_score(style: str, venue: Venue) -> tuple[int, str]:
     else:
         reason = "Best fit based on venue atmosphere, capacity, and style language."
     return score, reason
+
+
+def _as_text(value) -> str:
+    if value is None:
+        return ""
+    if isinstance(value, list):
+        return ", ".join(str(item) for item in value if item)
+    return str(value)
+
+
+def _audio_guidance_for_music(audio_analysis: dict | None) -> str:
+    """Format the uploaded-track analysis for the Lyria music prompt."""
+    if not audio_analysis or audio_analysis.get("error"):
+        return ""
+
+    rows = []
+    for label, key in [
+        ("Summary", "summary"),
+        ("Genres", "genres"),
+        ("BPM", "bpm_estimate"),
+        ("Energy", "energy"),
+        ("Mood", "mood"),
+        ("Production notes", "production_notes"),
+        ("Venue signals", "venue_signals"),
+    ]:
+        text = _as_text(audio_analysis.get(key)).strip()
+        if text:
+            rows.append(f"{label}: {text}")
+
+    if not rows:
+        return ""
+
+    return (
+        "Uploaded track analysis from NOCTURNE's audio listener:\n"
+        + "\n".join(f"- {row}" for row in rows)
+    )
 
 
 # ── Vibe Match ───────────────────────────────────────────────────────────────
@@ -328,6 +407,7 @@ async def demo_venue_match(request: DemoVenueMatchRequest):
     venues_by_id = {venue.id: venue for venue in venues}
 
     audio_analysis: dict | None = None
+    garment_analysis: dict | None = None
     style_segments = [request.style] if request.style else []
     if request.audio_data_url:
         try:
@@ -337,6 +417,15 @@ async def demo_venue_match(request: DemoVenueMatchRequest):
                 style_segments.append(f"AI heard in the uploaded track: {phrase}")
         except audio_analyzer.AudioAnalyzerError as exc:
             audio_analysis = {"error": str(exc)}
+
+    if request.image_data_urls:
+        try:
+            garment_analysis = await garment_analyzer.analyze(request.image_data_urls)
+            phrase = garment_analysis.get("style_phrase")
+            if isinstance(phrase, str) and phrase:
+                style_segments.append(f"AI saw in the uploaded photos: {phrase}")
+        except garment_analyzer.GarmentAnalyzerError as exc:
+            garment_analysis = {"error": str(exc)}
 
     combined_style = "\n".join(s for s in style_segments if s).strip()
 
@@ -374,6 +463,7 @@ async def demo_venue_match(request: DemoVenueMatchRequest):
         results=ranked,
         interpretation=interpretation,
         audio_analysis=audio_analysis,
+        garment_analysis=garment_analysis,
         combined_style=combined_style or None,
         matcher=matcher_used,
     )
@@ -402,29 +492,54 @@ async def demo_performance_video(request: DemoPerformanceVideoRequest):
     if not request.image_data_urls:
         raise HTTPException(status_code=400, detail="Upload at least one performer image")
 
-    # Build input_references. NOTE: as of 2026-04-29, Seedance 2.0 (and most
-    # other major hosted video-gen models on OpenRouter — Veo 3.1, Sora 2,
-    # etc.) refuse images of real people with the upstream error
-    # "InputImageSensitiveContentDetected.PrivacyInformation: The request
-    # failed because the input image may contain real person." This blocks
-    # the personalized "performer's face in the video" beat at the model
-    # provider's content-moderation layer; it is not a prompt-engineering
-    # problem. Until a model with explicit consent flow is wired in, we
-    # send ONLY the venue image as a visual reference. The frontend still
-    # accepts performer photos (for UX continuity and future use) but they
-    # are intentionally NOT forwarded to Seedance. Tracked in SPEC §9.6.
+    # Build input_references. As of 2026-04-29, Seedance 2.0 / Veo 3.1 / Sora 2
+    # refuse images that contain identifiable people via the
+    # "InputImageSensitiveContentDetected.PrivacyInformation" filter. The earlier
+    # blanket-skip of every performer photo was scoped to that face-photo case.
+    # As of 2026-05-01 the user uploads garment-only reference shots (flat lay,
+    # mannequin, hanger), which should pass the moderation layer. We forward
+    # them as Identity Sheet references so the prompt's wardrobe-preservation
+    # language has something to anchor on. Each reference is resized to
+    # <=1024 px JPEG to dodge the OpenRouter ~2 MB silent-drop limit.
+    # Reference conditioning on Seedance is style-leaning (not 1:1 garment
+    # transfer); pixel-true outfit transfer is still v2 work (virtual try-on
+    # then img2vid). Tracked in SPEC §9.6.
     venue_image_url = (venue.image_url or "").strip()
     input_references: list[str] = []
     if venue_image_url:
         input_references.append(venue_image_url)
-    # request.image_data_urls is intentionally not appended — see comment above.
+
+    performer_ref_count = 0
+    for data_url in (request.image_data_urls or [])[:3]:  # cap at 3 references
+        if not data_url:
+            continue
+        resized = _resize_data_url_for_seedance(data_url)
+        if resized:
+            input_references.append(resized)
+            performer_ref_count += 1
+
+    # Auto-augment style_text with the Tier 3 wardrobe read so the user does
+    # not have to describe the outfit by hand. Mirrors the parallel garment
+    # analysis that runs during /api/ai/demo-venue-match. Cheap call (~2s
+    # on Gemini Flash) and silent-fallback if it fails — the user's typed
+    # style is preserved either way.
+    augmented_style = (request.style or "").strip()
+    if request.image_data_urls:
+        try:
+            garment_read = await garment_analyzer.analyze(request.image_data_urls)
+            wardrobe_phrase = garment_read.get("style_phrase")
+            if isinstance(wardrobe_phrase, str) and wardrobe_phrase:
+                sep = " | " if augmented_style else ""
+                augmented_style = f"{augmented_style}{sep}wardrobe: {wardrobe_phrase}"
+        except garment_analyzer.GarmentAnalyzerError:
+            pass
 
     prompt = seedance_prompt.build_seedance_prompt(
         performer_name=request.performer_name,
         venue=venue,
-        style_text=request.style,
+        style_text=augmented_style,
         has_venue_ref=bool(venue_image_url),
-        performer_ref_count=0,  # performer photos are blocked by Seedance moderation
+        performer_ref_count=performer_ref_count,
     )
 
     try:
@@ -528,13 +643,29 @@ async def demo_music_preview(request: DemoMusicPreviewRequest):
     finally:
         await db.close()
 
+    performer_style = (request.combined_style or request.style).strip()
+    audio_guidance = _audio_guidance_for_music(request.audio_analysis)
+    audio_direction = (
+        f"\n\n{audio_guidance}\n"
+        "Use that uploaded-track analysis as the primary musical fingerprint: "
+        "preserve its tempo range, groove feel, energy, mood, and production textures "
+        "where compatible with the venue. Compose a NEW instrumental clip inspired by "
+        "those qualities; do not copy melodies, vocals, lyrics, samples, or any "
+        "recognizable protected expression from the uploaded track."
+        if audio_guidance
+        else ""
+    )
     prompt = (
         f"Compose a 30-second instrumental music clip for a DJ named {request.performer_name} "
         f"performing at {venue.name} in {venue.city or 'the city'}. "
-        f"Performer style: {request.style}. "
+        f"Performer style and match context: {performer_style}. "
         f"Venue atmosphere: {', '.join(venue.vibe_tags) or 'club, electronic'}. "
-        f"Produce a peak-time loop with driving rhythm, atmospheric pads, and a clear groove "
-        f"that would fit a club soundsystem. No vocals. No spoken word. Instrumental only."
+        f"Venue description: {venue.description or 'electronic club venue'}."
+        f"{audio_direction}\n\n"
+        "Make the output feel like a venue-ready extension of the uploaded track's "
+        "sonic identity, adapted to this room. Produce a peak-time club loop with a "
+        "clear groove and club-soundsystem low end. No vocals. No spoken word. "
+        "Instrumental only."
     )
 
     if not lyria_client.is_configured():
@@ -663,7 +794,7 @@ async def music_preview(request: MusicPreviewRequest):
         await db.close()
 
     return DemoAssetResponse(
-        audio_url="/assets/v2/music-preview.mp3",
+        audio_url=MUSIC_FALLBACK_URL,
         provider="lyria-3-clip-preview",
         generated=False,
         note=DEMO_ASSET_NOTE,

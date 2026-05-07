@@ -47,7 +47,7 @@
         </label>
 
         <label class="block">
-          <span class="mb-2 block text-xs font-bold uppercase tracking-widest text-muted">Style</span>
+          <span class="mb-2 block text-xs font-bold uppercase tracking-widest text-muted">Style <span class="text-[10px] font-medium normal-case text-muted/80">(optional — your photos and audio are auto-read)</span></span>
           <textarea id="performerStyle" class="h-32 w-full rounded-lg border border-line bg-background px-4 py-3 text-text focus:border-gold focus:ring-gold">melodic techno, cinematic house, warm late-night energy, premium club atmosphere</textarea>
         </label>
 
@@ -78,6 +78,12 @@
         <h2 id="audioAnalysisSummary" class="mt-2 font-headline text-2xl font-bold leading-snug"></h2>
         <dl id="audioAnalysisDetails" class="mt-4 grid grid-cols-2 gap-x-4 gap-y-2 text-sm"></dl>
         <p id="audioInterpretation" class="mt-4 hidden text-sm leading-6 text-muted"></p>
+      </div>
+
+      <div id="garmentAnalysisPanel" class="hidden rounded-xl border border-gold/40 bg-panel p-6">
+        <p class="text-xs font-bold uppercase tracking-[0.3em] text-gold">Saw in your photos</p>
+        <h2 id="garmentAnalysisSummary" class="mt-2 font-headline text-2xl font-bold leading-snug"></h2>
+        <dl id="garmentAnalysisDetails" class="mt-4 grid grid-cols-2 gap-x-4 gap-y-2 text-sm"></dl>
       </div>
 
       <div class="rounded-xl border border-line/50 bg-surface p-6">
@@ -119,6 +125,8 @@
     let syncedSoundtrackEl = null;
     let muxInProgress = false;
     let muxedVideoSrc = null;
+    let lastAudioAnalysis = null;
+    let lastCombinedStyle = null;
 
     const statusEl = document.getElementById("status");
     const previewEl = document.getElementById("imagePreview");
@@ -126,6 +134,9 @@
     const audioAnalysisPanel = document.getElementById("audioAnalysisPanel");
     const audioAnalysisSummary = document.getElementById("audioAnalysisSummary");
     const audioAnalysisDetails = document.getElementById("audioAnalysisDetails");
+    const garmentAnalysisPanel = document.getElementById("garmentAnalysisPanel");
+    const garmentAnalysisSummary = document.getElementById("garmentAnalysisSummary");
+    const garmentAnalysisDetails = document.getElementById("garmentAnalysisDetails");
     const audioInterpretation = document.getElementById("audioInterpretation");
     const venueResultsEl = document.getElementById("venueResults");
     const matchCountEl = document.getElementById("matchCount");
@@ -171,6 +182,8 @@
 
     document.getElementById("performerAudio").addEventListener("change", async (event) => {
       audioDataUrl = null;
+      lastAudioAnalysis = null;
+      lastCombinedStyle = null;
       const file = (event.target.files || [])[0];
       if (!file) {
         audioFileLabel.textContent = "";
@@ -292,6 +305,32 @@
       }
     }
 
+    function renderGarmentAnalysis(analysis) {
+      if (!analysis) {
+        garmentAnalysisPanel.classList.add("hidden");
+        return;
+      }
+      garmentAnalysisPanel.classList.remove("hidden");
+      if (analysis.error) {
+        garmentAnalysisSummary.textContent = "Photo analysis failed";
+        garmentAnalysisDetails.innerHTML = `<dd class="col-span-2 text-muted">${analysis.error}</dd>`;
+        return;
+      }
+      garmentAnalysisSummary.textContent = analysis.summary || "Outfit captured.";
+      const rows = [];
+      const pushRow = (label, value) => {
+        if (value === undefined || value === null || value === "" || (Array.isArray(value) && value.length === 0)) return;
+        const text = Array.isArray(value) ? value.join(", ") : String(value);
+        rows.push(`<dt class="font-bold uppercase tracking-widest text-[10px] text-muted">${label}</dt><dd class="text-text">${text}</dd>`);
+      };
+      pushRow("Garments", analysis.garments);
+      pushRow("Palette", analysis.color_palette);
+      pushRow("Material", analysis.material);
+      pushRow("Register", analysis.style_register);
+      pushRow("Venue signals", analysis.venue_signals);
+      garmentAnalysisDetails.innerHTML = rows.join("");
+    }
+
     function renderVenues(results) {
       matchCountEl.textContent = `${results.length} matches`;
       venueResultsEl.innerHTML = results.map((item, index) => `
@@ -324,6 +363,7 @@
     async function generateMusic() {
       const performerName = document.getElementById("performerName").value.trim();
       const style = document.getElementById("performerStyle").value.trim();
+      const musicStyle = lastCombinedStyle || style;
       if (!selectedVenue) return;
 
       musicPanel.classList.remove("hidden");
@@ -338,7 +378,13 @@
         response = await fetch(`${API}/api/ai/demo-music-preview`, {
           method: "POST",
           headers: {"Content-Type": "application/json"},
-          body: JSON.stringify({performer_name: performerName, style, venue_id: selectedVenue})
+          body: JSON.stringify({
+            performer_name: performerName,
+            style: musicStyle,
+            combined_style: lastCombinedStyle,
+            audio_analysis: lastAudioAnalysis && !lastAudioAnalysis.error ? lastAudioAnalysis : null,
+            venue_id: selectedVenue
+          })
         });
       } catch (err) {
         musicTitle.textContent = "Music request failed";
@@ -354,9 +400,12 @@
 
       musicTitle.textContent = data.generated ? "Your venue track" : "Demo music asset";
       musicNote.textContent = data.note || "";
-      if (data.prompt) {
+      if (data.prompt && data.generated) {
         musicPromptEl.textContent = "Prompt: " + data.prompt;
         musicPromptEl.classList.remove("hidden");
+      } else {
+        musicPromptEl.textContent = "";
+        musicPromptEl.classList.add("hidden");
       }
       const src = data.audio_data_url || data.audio_url;
       if (src) {
@@ -405,7 +454,10 @@
         return;
       }
       setStatus("");
+      lastAudioAnalysis = data.audio_analysis || null;
+      lastCombinedStyle = data.combined_style || null;
       renderAudioAnalysis(data.audio_analysis, data.interpretation);
+      renderGarmentAnalysis(data.garment_analysis);
       renderVenues(data.results || []);
     });
 

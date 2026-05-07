@@ -192,6 +192,7 @@ class DemoVenueMatchResponse(BaseModel):
     results: list[DemoVenueMatch]
     interpretation: str | None = None
     audio_analysis: dict | None = None
+    garment_analysis: dict | None = None
     combined_style: str | None = None
     matcher: str = "deterministic"
 
@@ -217,6 +218,8 @@ class DemoMusicPreviewRequest(BaseModel):
     performer_name: str
     style: str
     venue_id: str
+    combined_style: str | None = None
+    audio_analysis: dict | None = None
 
 
 class DemoMusicPreviewResponse(BaseModel):

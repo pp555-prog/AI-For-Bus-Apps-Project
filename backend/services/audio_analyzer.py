@@ -151,4 +151,10 @@ def _condense_style(analysis: dict) -> str:
     mood = analysis.get("mood")
     if isinstance(mood, str) and mood:
         parts.append(f"mood: {mood}")
+    production = analysis.get("production_notes")
+    if isinstance(production, str) and production:
+        parts.append(f"production: {production.rstrip('.')}")
+    venue_signals = analysis.get("venue_signals") or []
+    if isinstance(venue_signals, list) and venue_signals:
+        parts.append("venue signals: " + ", ".join(str(v) for v in venue_signals))
     return ". ".join(parts)
