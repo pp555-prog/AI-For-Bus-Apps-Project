@@ -50,20 +50,21 @@ backend/ (FastAPI + aiosqlite + SQLite)
   - main.py    - mounts routers + static UI
 
 External AI (all routed through the single OpenRouter key):
-  - OpenRouter LLM   (v1, LIVE)    - vibe matching, bio gen, promo prompts, party-sim text, venue match reasoning
-  - OpenRouter Audio (v1, LIVE)    - audio-input style analysis for the personalized demo; default google/gemini-2.5-flash
-  - OpenRouter Video (v1, LIVE)    - personalized async video generation; default bytedance/seedance-2.0
-  - OpenRouter Lyria (v1, LIVE)    - 30s instrumental music clips; default google/lyria-3-clip-preview
-  - n8n              (v1, LIVE)    - booking confirmation emails on every booking
-  - OpenAI Codex     (dev tool)    - used to write code; not a runtime feature
-  - ElevenLabs       (v2 roadmap)  - voice synthesis
+  - OpenRouter LLM    (v1, LIVE)   - vibe matching, bio gen, promo prompts, party-sim text, venue match reasoning
+  - OpenRouter Audio  (v1, LIVE)   - audio-input style analysis for the personalized demo; default google/gemini-2.5-flash
+  - OpenRouter Vision (v1, LIVE)   - garment / outfit analyzer for uploaded performer photos; default google/gemini-2.5-flash
+  - OpenRouter Video  (v1, LIVE)   - personalized async video generation; default bytedance/seedance-2.0
+  - OpenRouter Lyria  (v1, LIVE)   - 30s instrumental music clips; default google/lyria-3-clip-preview
+  - n8n               (v1, LIVE)   - booking confirmation emails on every booking
+  - OpenAI Codex      (dev tool)   - used to write code; not a runtime feature
+  - ElevenLabs        (v2 roadmap) - voice synthesis
 ```
 
 
 **LIVE = working today and demoable.** OpenRouter-routed LLM, OpenRouter video (Seedance 2.0), OpenRouter Lyria 3 music, and the n8n booking confirmation workflow. All AI generation flows through one OpenRouter API key.
 **Planned = scoped for v1 but not yet built.** Real DJ availability calendar (booking status workflow already shipped — see TASKS.md).
 **Dev tool = used during development, not part of the deployed product.** Codex falls here.
-**Class demo flow** uses `/personal-demo.html`. `POST /api/ai/demo-venue-match` accepts performer name, typed style, photos, and an optional audio clip; the frontend client-side-trims the audio to 30s mono 16 kHz WAV before posting. The backend runs `audio_analyzer.analyze` (Gemini via OpenRouter) for the structured style read, augments the typed style, and calls `vibe_matcher.match_venues` (LLM-powered) for the ranked venues with reasoning. Match selection then fires `POST /api/ai/demo-music-preview` (Lyria) and `POST /api/ai/demo-performance-video` + `GET /api/ai/demo-performance-video/{job_id}` (Seedance) in parallel. Once both assets are ready, `POST /api/ai/demo-performance-video/mux` can use ffmpeg to bake the Lyria/fallback soundtrack into a static MP4 under `/assets/generated/`; the frontend falls back to browser-synced playback if ffmpeg is unavailable. The video call passes the matched **venue's photo** as the only `input_reference` so Seedance anchors the rendered scene on the actual room. Performer photos are uploaded for UX continuity but are intentionally NOT forwarded to Seedance because hosted video-gen models block real-person photos via content moderation (`InputImageSensitiveContentDetected.PrivacyInformation`); see SPEC §9.6 for the full finding.
+**Class demo flow** uses `/personal-demo.html`. `POST /api/ai/demo-venue-match` accepts performer name, typed style, photos, and an optional audio clip; the frontend client-side-trims the audio to 30s mono 16 kHz WAV before posting. The backend runs `audio_analyzer.analyze` (Gemini via OpenRouter) for the structured style read AND `garment_analyzer.analyze` (Gemini via OpenRouter, multi-image chat call) for a structured wardrobe read of the uploaded photos. Both reads auto-augment the typed style, and `vibe_matcher.match_venues` (LLM-powered) ranks venues against the combined signal. The frontend renders both reads as panels ("Heard in your track" and "Saw in your photos") so the user does not need to type the outfit. Match selection then fires `POST /api/ai/demo-music-preview` (Lyria) and `POST /api/ai/demo-performance-video` + `GET /api/ai/demo-performance-video/{job_id}` (Seedance) in parallel. The music request sends the combined style plus the structured audio analysis, so Lyria is prompted from the uploaded track's tempo, groove, energy, mood, production notes, and venue signals rather than the raw textarea alone. Once both assets are ready, `POST /api/ai/demo-performance-video/mux` can use ffmpeg to bake the Lyria/fallback soundtrack into a static MP4 under `/assets/generated/`; the frontend falls back to browser-synced playback if ffmpeg is unavailable. **Seedance reference conditioning (as of 2026-05-01):** the matched venue's photo is the first `input_reference` (Environment Sheet) and up to 3 performer photos are appended (Identity Sheet) after auto-resize to <=1024 px JPEG. Photos that contain a real person's face/body are still blocked at the Seedance moderation layer (`InputImageSensitiveContentDetected.PrivacyInformation`) — the user must upload garment-only shots (flat lay, hanger, mannequin) for the Identity Sheet path to survive. The Seedance prompt builder is wardrobe-first ("preserve the wardrobe shown on the Identity Sheet"); pixel-true outfit transfer is still v2 work (virtual try-on then img2vid). See SPEC §9.6.
 **v2 = roadmap, not yet production-complete.** Do not market ElevenLabs/full media workflows as live in user-facing copy.
 
 ---
@@ -83,6 +84,7 @@ External AI (all routed through the single OpenRouter key):
 | `backend/services/openrouter_video_client.py` | OpenRouter async video client (Seedance 2.0 default) | When changing video model or async polling |
 | `backend/services/lyria_client.py` | OpenRouter Lyria 3 music client | When changing music model or response parsing |
 | `backend/services/audio_analyzer.py` | OpenRouter audio-input client; sends uploaded clips to Gemini for structured style analysis | When changing the audio model or output schema |
+| `backend/services/garment_analyzer.py` | OpenRouter vision client; sends uploaded performer photos to Gemini for a structured wardrobe read; mirrors `audio_analyzer.py` | When changing the vision model, output schema, or photo cap |
 | `backend/services/vibe_matcher.py` | Core matching engine | When changing the match algorithm or prompt |
 | `backend/seed.py` | Sample data generator | When test data needs to change |
 | `evals/run_eval.py` + `compute_metrics.py` | DJ-match eval harness (SPEC §9.3) | When prompt/scoring changes warrant a re-run |

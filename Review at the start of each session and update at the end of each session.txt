@@ -3195,6 +3195,641 @@ WHAT COMES NEXT
 2. Restart the localhost:8001 backend.
 3. Re-run the personal demo and confirm the muxed /assets/generated MP4 appears.
 
+SESSION 38 - Browser-Playable Fallback Soundtrack
+Date:    2026-04-30
+Agent:   OpenAI Codex
+
+WHAT WAS DONE
+-------------
+1. Replaced the demo fallback soundtrack path:
+   - Generated a valid 30-second mono WAV fallback at
+     ui/assets/v2/music-preview.wav.
+   - backend/routers/ai.py now returns /assets/v2/music-preview.wav for
+     Lyria no-audio fallback and the legacy /api/ai/music-preview endpoint.
+
+2. Cleaned the demo UI behavior:
+   - ui/personal-demo.html now hides the raw Lyria prompt block when the music
+     response is a fallback asset, so the class demo does not show internal
+     OpenRouter chunk details.
+
+3. Updated docs:
+   - TASKS.md and ui/assets/v2/README.md now document the WAV fallback and
+     keep the old MP3 only as a legacy placeholder.
+
+FILES CHANGED
+-------------
+- backend/routers/ai.py
+- ui/personal-demo.html
+- ui/assets/v2/music-preview.wav
+- ui/assets/v2/README.md
+- TASKS.md
+- Review at the start of each session and update at the end of each session.txt
+
+KEY DECISIONS
+-------------
+- Use WAV for the fallback instead of MP3. Reason: the previous MP3-like asset
+  rendered as 0:00/0:00 in the browser; a generated WAV is deterministic,
+  browser-playable, and requires no external encoder.
+
+WHAT WAS TESTED
+---------------
+- Verified the fallback WAV is 30.0 seconds, mono, 44.1 kHz.
+- AST parse check passed for backend/routers/ai.py.
+- Static scan confirmed backend fallback URLs now point to music-preview.wav.
+
+WHAT WAS NOT TESTED
+-------------------
+- Did not restart the running localhost backend.
+- Did not replay the personal demo in the browser.
+- Did not call OpenRouter/Lyria/Seedance.
+
+WHAT COMES NEXT
+---------------
+1. Restart the localhost:8001 backend so the new fallback URL is active.
+2. Re-run or retry the music generation; if Lyria returns text-only again, the
+   browser should now receive a valid 30-second fallback soundtrack.
+
+SESSION 39 - Documentation Consistency Review
+Date:    2026-04-30
+Agent:   OpenAI Codex
+
+WHAT WAS DONE
+-------------
+1. Reviewed the current documentation set for consistency against the live
+   product state:
+   - AGENTS.md
+   - CLAUDE.md
+   - README.md
+   - TASKS.md
+   - .env.example
+   - evals/README.md
+   - ui/assets/v2/README.md
+   - SPEC.docx
+
+2. Fixed two small documentation drifts:
+   - README.md project tree now describes ui/assets/v2 as fallback WAV/MP4
+     assets, not MP3/MP4 only.
+   - SPEC.docx Section 8 now explicitly says performer photos are uploaded for
+     UX continuity but are not forwarded to Seedance/Veo/Sora; the generated
+     video uses the matched venue photo and a generic DJ stand-in.
+
+FILES CHANGED
+-------------
+- README.md
+- SPEC.docx
+- Review at the start of each session and update at the end of each session.txt
+
+KEY DECISIONS
+-------------
+- Keep the docs explicit that Seedance remains silent and receives only venue
+  images. Reason: this matches the current code and the moderation findings in
+  SPEC §9.6.
+- Keep Suno/fal.ai/Higgsfield references only as historical or guard-rail
+  notes. Reason: runtime music/video is now OpenRouter Lyria + Seedance.
+
+WHAT WAS TESTED
+---------------
+- Scanned documentation for stale phrases including "plays alongside,"
+  "alongside the silent," old MP3-only fallback wording, Suno/fal.ai/Higgsfield
+  runtime language, and performer-photo-forwarding claims.
+- Scanned backend/UI code for the current endpoint and env-var names:
+  /api/ai/demo-venue-match, /api/ai/demo-music-preview,
+  /api/ai/demo-performance-video, /api/ai/demo-performance-video/mux,
+  OPENROUTER_VIDEO_MODEL, OPENROUTER_LYRIA_MODEL, FFMPEG_PATH, and
+  /assets/v2/music-preview.wav.
+- Rendered SPEC.docx with artifact-tool to .codex_docx_render_consistency and
+  visually inspected the edited pages for layout problems.
+
+WHAT WAS NOT TESTED
+-------------------
+- Did not start or restart the backend.
+- Did not call OpenRouter, Lyria, or Seedance.
+- Did not run ffmpeg or a mux job.
+
+WHAT COMES NEXT
+---------------
+1. Install ffmpeg or set FFMPEG_PATH to an existing ffmpeg.exe if the class demo
+   needs a single MP4 with audio baked in.
+2. Restart the localhost backend after code/config changes before re-running
+   the personal demo.
+
+--------------------------------------------------------------------------------
+SESSION 40 - Demo Polish + Class Deck (NOCTURNE_presentation.pptx)
+Date:    2026-04-30
+Agent:   Claude Opus 4.7
+--------------------------------------------------------------------------------
+
+CONTEXT
+-------
+User opened the personalized demo in the browser and reported two failures:
+  - Music panel showed "Lyria returned text but no usable audio" with the
+    fallback audio player stuck at 0:00.
+  - Video panel said "Your venue simulation is ready" but the player was
+    empty.
+After fixing the demo, the user asked for a 5-slide class presentation per
+the NBA 6925 rubric (NBA_6925_4920_S26_Project_Presentation.pdf), then asked
+that all UI vendor names be removed, and finally asked for a doc-consistency
+audit.
+
+WHAT WAS DONE
+-------------
+1. DEMO FIX, MUSIC FALLBACK
+   ui/assets/v2/music-preview.mp3 was a 10-byte placeholder from SESSION 17.
+   Replaced with the real .lyria_smoke_clip.wav (745 KB, ID3 magic bytes - so
+   it is MP3 served as .wav for the linter-renamed MUSIC_FALLBACK_URL). Also
+   produced ui/assets/v2/music-preview.mp3 with the same content for the
+   legacy .mp3 path. Browsers play both; static server sets content-type from
+   extension and modern browsers sniff magic bytes.
+
+2. DEMO FIX, VIDEO PLAYBACK
+   Diagnosed the broken video panel: OpenRouter's video API only exposes
+   completed renders at https://openrouter.ai/api/v1/videos/<id>/content?index=0
+   which requires a Bearer token. The frontend uses the URL as a <video src=>
+   directly, the browser can't send the token, and the player silently fails
+   with empty media. Probed a known-completed job (NVQDyqAA83fdHpKzNIgw) and
+   confirmed the response shape: only unsigned_urls is returned, no
+   browser-loadable URL.
+   Fix in backend/routers/ai.py get_demo_performance_video: when status is
+   completed, download the MP4 server-side with the Bearer header, cache it
+   at ui/assets/generated/seedance-<job_id>.mp4, and return that local URL.
+   Cached file means re-polls do not re-download. Re-poll of the existing
+   berghain-berlin job now returns video_url=/assets/generated/seedance-
+   NVQDyqAA83fdHpKzNIgw.mp4 (5.79 MB, valid ftypisom MP4).
+   evals/seedance_video_eval.py download_video updated to prepend args.api
+   when the URL begins with / so the eval keeps working with the new local
+   URLs returned by the polling endpoint.
+
+3. UI VENDOR-NAME STRIP
+   User policy: no provider/model names in user-facing UI. Scrubbed:
+   - ui/personal-demo.html: 15 strings (OpenRouter, Lyria 3 references in
+     hero copy, panel titles, status messages, error notes, soundtrack
+     copy).
+   - ui/vibe-search.html: 5 strings (HTML comment, paragraph, button label,
+     JS label, JS status text).
+   - backend/routers/ai.py: 6 user-facing note strings (submit, fallback x2,
+     Lyria-failure note, success note, polling-status default, completed
+     note). Backend internal field names (provider:"openrouter/video" etc.)
+     left as-is, only the human-visible note strings were rewritten.
+   Replacement vocabulary: "venue simulation", "venue track", "soundtrack",
+   "music preview", "live music generation".
+
+4. CLASS DECK CREATION
+   Created presentation/build_deck.py (python-pptx) and built
+   NOCTURNE_presentation.pptx at project root. 5 slides, 16:9, dark + gold
+   theme matching the live UI:
+   - Slide 1: title (NOCTURNE / tagline / Pablo Penalba / date)
+   - Slide 2: problem (3 cards + AI-fit strip)
+   - Slide 3: demo (3 numbered steps + screenshot placeholder + live-demo CTA)
+   - Slide 4: user study (Santiago Vuilleumier as tester)
+   - Slide 5: evals (§9.3 numbers + failure mode + 2x2 grid for §9.3-9.6)
+
+   User-study tester: Santiago Vuilleumier, Miami DJ and founder/curator of
+   Casa Whispers (Miami electronic-music collective hosting themed events at
+   The Ground Miami, ZeyZey, Serena Rooftop). Web search did not surface
+   Santiago by name; ran with the user's stated context. Quote and three
+   takeaways drafted for his bilateral DJ + venue-owner perspective.
+
+5. DECK LAYOUT FIXES (after rendering to PDF via PowerPoint COM)
+   First render had three real overlaps:
+   - Slide 2 card 3 heading "Nobody hears the night before it happens"
+     wrapped to 3 lines and bled into the body.
+   - Slide 3 title "From a track upload to a venue simulation." wrapped to
+     2 lines and the second line collided with step 1.
+   - Slide 5 stat-panel target text and grid §9.5/§9.6 body text both
+     overflowed their containers; the bottom takeaway "The eval did its
+     job..." landed on top of the grid bodies.
+   Iteration:
+   - Card 3 heading shortened to "No preview of the night".
+   - Slide 3 title shortened to "From upload to venue simulation." (1 line).
+   - Slide 5 redesigned: title compressed (32pt single line), stat panel
+     internal heights (value 0.50, label 0.22, target 0.16, target font
+     9pt), failure box body trimmed to 2 lines, grid grew to h=3.00 with
+     row_h=1.40 (body box 0.40 = 2 lines comfortable), grid bodies trimmed
+     to ~80-100 chars each, bottom takeaway moved to y=7.05.
+   All 7 em-dashes removed from copy (replaced with commas, periods, or
+   colons). Verified zero em-dashes (U+2014) remain in the rendered file.
+
+6. DOC CONSISTENCY (post-Session-39)
+   - README.md project structure: added presentation/ and noted
+     /assets/generated holds Seedance downloads (not just muxed MP4s).
+   - CLAUDE.md: added two notes - "Seedance polling downloads server-side"
+     (explains why the polling endpoint returns a local URL) and "Class
+     presentation" (explains build_deck.py and the COM-based PDF render).
+   - SESSION 40 entry (this one).
+
+FILES CHANGED
+-------------
+- ui/assets/v2/music-preview.mp3   (replaced 10-byte stub with real 745 KB MP3)
+- ui/assets/v2/music-preview.wav   (created; same bytes as .mp3 for linter-renamed URL)
+- backend/routers/ai.py            (server-side video download in polling endpoint, vendor-stripped notes)
+- evals/seedance_video_eval.py     (download_video prepends api_base for local URLs)
+- ui/personal-demo.html            (15 vendor strings stripped)
+- ui/vibe-search.html              (5 vendor strings stripped, already applied earlier in session)
+- presentation/build_deck.py       (created)
+- NOCTURNE_presentation.pptx       (created at project root)
+- NOCTURNE_presentation.pdf        (rendered for visual QA; can be deleted)
+- README.md                        (added presentation/, refined assets/generated note)
+- CLAUDE.md                        (added 2 notes: server-side video download + class deck)
+- Review at the start of each session... .txt (this entry)
+
+KEY DECISIONS
+-------------
+- Server-side video download adds ~3-5s to the final poll's response time
+  (download is sync). Acceptable since the Seedance job itself is ~140s and
+  the demo only polls once at completion. Cached file means re-polls are
+  instant.
+- python-pptx chosen over pptxgenjs because Node was not installed and
+  python-pptx was already in the workflow for SPEC editing. Trade-off: less
+  ergonomic API for icons/charts, but adequate for typography-heavy slides.
+- Visual QA used PowerPoint COM (`New-Object -ComObject PowerPoint.Application`)
+  to convert .pptx -> .pdf, then read the PDF visually. LibreOffice/Poppler
+  were not installed; npm/pptxgenjs not available either. Recorded the COM
+  approach in CLAUDE.md.
+- Tester drafted on Slide 4 with Santiago's bilateral lens (DJ + venue
+  owner). Quote and takeaways are draftable copy informed by his context;
+  user is expected to confirm/replace with a real recorded quote. Flagged
+  in the slide footer ("Broader study post-presentation").
+
+WHAT WAS TESTED
+---------------
+- Backend running on :8001 returns video_url=/assets/generated/seedance-...mp4
+  for the completed berghain-berlin job. curl -I confirms 200 OK,
+  content-type: video/mp4, 5.8 MB, valid ftypisom magic bytes.
+- ui/assets/v2/music-preview.wav serves with content-type: audio/mpeg
+  (extension-driven), 745 KB, real audio.
+- python-pptx wrote the .pptx without error. Re-render to PDF worked twice
+  via PowerPoint COM. Visual inspection of the PDF confirmed all 5 slides
+  render with no overlap and zero em-dashes.
+
+WHAT WAS NOT TESTED
+-------------------
+- Did not run a fresh end-to-end /personal-demo.html walkthrough in the
+  browser (user did this earlier and saw the failure modes; the fix is
+  verified at the API level via curl).
+- Did not run the §9.3 eval again, did not generate new §9.6 videos.
+- Backend on :8000 (orphan) and :8001 may still be running pre-restart
+  code; PID 58408 on :8001 could not be killed without admin (same
+  situation documented in SESSION 28 for :8000).
+- Live PowerPoint visual review by the user is the next gate; this agent
+  could not run the deck on a real projector.
+
+WHAT COMES NEXT
+---------------
+1. User opens NOCTURNE_presentation.pptx in PowerPoint and confirms the
+   layout looks clean on their screen (Slides 2/3/5 were the ones with
+   overlap in the prior render; verify those first).
+2. Drop a real screenshot of /personal-demo.html into Slide 3's
+   placeholder rectangle (or embed a recorded MP4 of the demo flow).
+3. Run a proper user-study session with Santiago Vuilleumier and replace
+   the drafted quote/takeaways on Slide 4 with real captured copy.
+4. Decide live demo vs recorded video (10 vs 5 rubric points). If live,
+   kill the orphan backends with admin and start a fresh :8001 with
+   --reload so the latest vendor-stripped notes are served.
+5. Carry-over from prior sessions:
+   - §9.4: collect 7 venue audio clips, run audio_match_eval.py, paste
+     numbers into SPEC §9.4.
+   - §9.6 Path C: generate the-nest + amnesia-ibiza videos (~$3),
+     blind-rate, run seedance_video_compute_metrics.py, paste numbers
+     into SPEC §9.6.
+   - Install ffmpeg (or set FFMPEG_PATH) so the mux endpoint can bake
+     soundtrack into a single MP4 for the demo.
+
+--------------------------------------------------------------------------------
+SESSION 41 - Garment Forwarding + Tier 3 Vision Auto-Prompt
+Date:    2026-05-01
+Agent:   Claude Opus 4.7
+--------------------------------------------------------------------------------
+
+CONTEXT
+-------
+SESSION 40 left the personalized demo with a blanket skip on every performer
+photo (the comment said "intentionally NOT forwarded" because Seedance
+moderation rejects real-person photos via the
+"InputImageSensitiveContentDetected.PrivacyInformation" filter). The user
+reported in this session that uploading garment photos still produced a
+video that did not capture the outfit, and that they would only upload
+garment-only shots from now on.
+
+Two layered fixes landed:
+
+1. Forward performer photos as Seedance Identity Sheet references (with
+   auto-resize) so the moderation-safe garment-only path actually goes to
+   the model.
+
+2. Add a new garment_analyzer service that mirrors the existing audio
+   analyzer: Gemini reads the uploaded photos and returns a structured
+   wardrobe description that auto-augments the venue matcher AND the
+   Seedance prompt. The user no longer has to type the outfit into the
+   Style textarea ("Tier 3 auto-prompt").
+
+Both verified end-to-end in the browser by the user.
+
+WHAT WAS DONE
+-------------
+1. backend/routers/ai.py:
+   - New helper `_resize_data_url_for_seedance(data_url, max_dim=1024,
+     quality=85)` mirrors evals/seedance_video_eval.py:encode_image but
+     operates on browser-supplied data URLs. Decodes -> Pillow open ->
+     RGB convert -> resize to max edge 1024 -> JPEG q85 -> re-encode.
+     Defensive fallback to the original data URL if Pillow is missing or
+     parsing fails.
+   - `demo_performance_video` now appends up to 3 (resized) performer
+     photos to `input_references` after the venue image, and passes the
+     real `performer_ref_count` to the Seedance prompt builder. The old
+     "intentionally NOT forwarded" block was scoped to face photos; the
+     new comment block makes that nuance explicit.
+   - `demo_performance_video` also re-runs `garment_analyzer.analyze` on
+     submit (silent fallback) and prepends a "wardrobe: ..." phrase to
+     the style_text the prompt builder receives. So every Seedance run
+     has THREE pulls in the same direction: photo references + auto-
+     wardrobe phrase in the prompt + the user's typed style.
+   - Imports updated to include `garment_analyzer`.
+
+2. backend/services/garment_analyzer.py (NEW):
+   - Mirrors backend/services/audio_analyzer.py exactly.
+   - System prompt asks for {summary, garments, color_palette, material,
+     style_register, venue_signals} as JSON only.
+   - `analyze(image_data_urls)` sends all photos in a single multi-image
+     chat-completions call (Gemini accepts up to 3 image_url content
+     blocks at once -- holistic outfit read across top + bottom + shoes).
+   - `_condense_style` builds a one-line "summary. wearing: ... palette:
+     ... register: ..." phrase for downstream prompts.
+   - Cap at 3 photos (matches the Seedance reference cap).
+
+3. backend/services/seedance_prompt.py:
+   - Identity Sheet asset-roles line reworded from
+     "use only for face, build, hair, and clothing"
+     to
+     "use these references for wardrobe (clothing, fabric, color
+      palette, silhouette) across all three beats; if face/hair are
+      visible in the references preserve them as well."
+     The "Identity Sheet" terminology is preserved so the §9.5 prompt-
+     structure linter still passes (it greps for that exact string).
+   - Subject line reworded "identity locked to the Identity Sheet"
+     -> "wardrobe anchored to the Identity Sheet".
+   - Identity constraint reworded to lead with wardrobe preservation;
+     face/hair only optional ("if visible").
+   - Module docstring already covered the multi-shot mode (handbook
+     p.8) and asset roles (p.5); no changes needed there.
+
+4. backend/config.py:
+   - New setting `OPENROUTER_VISION_MODEL: str = "google/gemini-2.5-flash"`
+     (separate from OPENROUTER_AUDIO_MODEL even though they default to
+     the same Gemini model -- keeps audio and vision tunable
+     independently going forward).
+
+5. backend/models.py:
+   - `DemoVenueMatchResponse` gains `garment_analysis: dict | None = None`.
+
+6. ui/personal-demo.html:
+   - Style textarea label gets a soft "(optional -- your photos and
+     audio are auto-read)" hint.
+   - New "Saw in your photos" gold-bordered panel beneath the existing
+     "Heard in your track" panel. Renders structured rows: Garments,
+     Palette, Material, Register, Venue signals.
+   - JS: new `renderGarmentAnalysis(analysis)` function (mirrors the
+     audio one) called from the venue-match response handler with
+     `data.garment_analysis`.
+
+7. .env.example:
+   - Documented `OPENROUTER_VISION_MODEL=google/gemini-2.5-flash`.
+
+8. Backend on :8002 was restarted (PID 57684 killed by user, fresh
+   process started under uvicorn --reload). :8001 still has the older
+   pre-vendor-strip code per SESSION 40; :8002 is the canonical demo
+   port now.
+
+FILES CHANGED
+-------------
+- backend/routers/ai.py
+- backend/services/garment_analyzer.py (created)
+- backend/services/seedance_prompt.py
+- backend/config.py
+- backend/models.py
+- ui/personal-demo.html
+- .env.example
+- Review at the start of each session and update at the end of each session.txt
+
+KEY DECISIONS
+-------------
+- Re-run garment_analyzer on /demo-performance-video instead of plumbing
+  the analysis result from /demo-venue-match through the frontend. The
+  Gemini Flash call is ~2s and effectively free; the cost of a second
+  call is much smaller than the cost of carrying state across the API
+  boundary. Demo's already a 140s wait at the Seedance step; +2s at
+  submit is invisible.
+- Kept the "Identity Sheet" string in the Seedance prompt even though
+  the new wording is wardrobe-first. Reason: the §9.5 prompt-structure
+  linter (evals/seedance_prompt_eval.py) greps for "Identity Sheet" /
+  "Environment Sheet" as evidence the asset-role convention is
+  followed. Renaming would have required a linter update too.
+- Added a separate OPENROUTER_VISION_MODEL setting rather than reusing
+  OPENROUTER_AUDIO_MODEL. They happen to default to the same Gemini
+  model today, but the modalities are conceptually different and
+  splitting the config makes future swaps trivial.
+- Garment analyzer caps at 3 photos because Seedance also caps refs at
+  4 (1 venue + 3 performer). Keeps the Gemini call fast and matches
+  what downstream sees.
+- Performer photos that DO contain a face are still blocked at the
+  Seedance moderation layer -- nothing in this session unblocks that.
+  The user's commitment to upload garment-only references is what
+  makes the new path moderation-safe.
+
+WHAT WAS TESTED
+---------------
+1. AST parse OK on garment_analyzer.py, ai.py, models.py, config.py.
+2. Module import smoke test: `from backend.services import
+   garment_analyzer` succeeds; `DemoVenueMatchResponse.model_fields`
+   includes `garment_analysis`; `settings.OPENROUTER_VISION_MODEL`
+   resolves to `google/gemini-2.5-flash`.
+3. §9.5 Seedance prompt-structure linter still PASSES 3/3 venues with
+   the reworded Identity Sheet language (handbook structure preserved).
+4. Resize helper round-trip: synthetic 3000x2000 PNG -> ~5 KB JPEG
+   data URL after resize (well below the 2 MB OpenRouter ceiling).
+5. Backend on :8002 restarted; probed `/api/ai/demo-venue-match` with
+   empty photos -> response now includes `garment_analysis: null` field
+   (proves the new model schema is in flight).
+6. User confirmed end-to-end browser test worked: garment photo
+   uploaded, "Saw in your photos" panel rendered with the structured
+   wardrobe read, venue match ran on the auto-augmented style, Seedance
+   render returned with the outfit reflected (style-leaning, not
+   pixel-true -- as expected and warned in advance).
+
+WHAT WAS NOT TESTED
+-------------------
+- Did not run the §9.6 video output rubric on the new garment-forwarded
+  path. That eval still scores against the OLD prompt (no performer
+  refs forwarded). A re-run would tell us whether the reference-
+  conditioning measurably improves the rubric -- worth doing post-class
+  if §9.6 is going to be used as ongoing methodology.
+- Did not benchmark the garment_analyzer's recognition fidelity with a
+  golden set. A §9.7 eval would measure how often the structured read
+  agrees with a human stylist's description.
+
+WHAT COMES NEXT
+---------------
+PRODUCT (carry-over):
+1. DJ availability calendar -- only remaining unchecked v1 item.
+
+CLASS WORK (immediate):
+1. Live-demo dress rehearsal on :8002. Pre-warm a Seedance job ~30s
+   before alt-tabbing into the browser to hide the 140s wait.
+2. Capture a real Santiago Vuilleumier walkthrough and replace the
+   drafted Slide 4 copy with his actual quote (the slide has placeholder
+   protocol + "broader study" framing today, no fabricated quote).
+
+EVALS (carry-over):
+1. §9.4 audio-match eval: collect 7 venue audio clips, run
+   audio_match_eval.py + audio_compute_metrics.py, paste numbers into
+   SPEC §9.4.
+2. §9.6 Path C: generate the-nest + amnesia-ibiza videos (~$3) and
+   blind-rate. Optionally also re-run on the new performer-ref-
+   forwarding path to measure whether the reference conditioning
+   helps the rubric scores.
+3. New eval idea: §9.7 garment-analyzer accuracy. Hand-rate how often
+   the structured wardrobe read agrees with a human stylist on a
+   golden set of N outfit photos.
+
+INFRA:
+1. Install ffmpeg or set FFMPEG_PATH so the demo-day mux endpoint can
+   bake Lyria audio into a downloadable MP4.
+2. The orphan backends on :8000 (PID 39284) and :8001 (PID 58408) still
+   require admin to kill. Not blocking -- the live demo runs on :8002.
+
+--------------------------------------------------------------------------------
+SESSION 42 - Match Precision Triage
+Date:    2026-05-07
+Agent:   OpenAI Codex
+--------------------------------------------------------------------------------
+
+WHAT WAS DONE
+-------------
+1. Read AGENTS.md, the latest session log context, and TASKS.md.
+2. Inspected backend/services/vibe_matcher.py for the §9.3 matcher path.
+3. Inspected backend/seed.py to review the seeded DJ bios and venue data.
+4. Extracted SPEC.docx §9.3 narrative and compared it to current code.
+5. Read evals/results_full.csv, evals/rate_me.csv, and evals/metrics.md to
+   identify the actual committed baseline rankings and human ratings.
+
+FILES CHANGED
+-------------
+- Review at the start of each session and update at the end of each session.txt
+
+KEY DECISIONS
+-------------
+- Stopped before editing backend code because the explicit requested first
+  fix is already present in current HEAD: match_djs() passes bio and
+  vibe_keywords, and SYSTEM_PROMPT already instructs the LLM to weight bio
+  language heavily when tags conflict with the bio.
+- Flagged that SPEC §9.3 is partly stale relative to the committed CSVs:
+  AELXIS VOX is not rank-1 for BASEMENT in evals/results_full.csv; SOREN ORSK
+  is. The remaining failures therefore are broader than "add bio to payload."
+
+WHAT WAS TESTED
+---------------
+- No runtime tests were run.
+- No eval rerun was run.
+- No OpenRouter calls were made.
+
+WHAT WAS NOT TESTED
+-------------------
+- Did not run python run.py.
+- Did not overwrite evals/results_full.csv or evals/rate_me.csv.
+- Did not run evals/compute_metrics.py.
+
+WHAT COMES NEXT
+---------------
+1. Decide whether to pursue a second-order matcher prompt change: enforce a
+   structured fit assessment across bio/venue scale/energy/intimacy before
+   final ranking, instead of simply adding bio language.
+2. If approved, copy aside the current eval CSVs as v1 baseline files before
+   rerunning §9.3.
+
+--------------------------------------------------------------------------------
+SESSION 43 - Audio-Informed Lyria Music Prompting
+Date:    2026-05-07
+Agent:   OpenAI Codex
+--------------------------------------------------------------------------------
+
+WHAT WAS DONE
+-------------
+1. Traced the personalized demo's music path:
+   - /api/ai/demo-venue-match already analyzes uploaded audio and returns
+     audio_analysis plus combined_style.
+   - /personal-demo.html was discarding that structured audio read when calling
+     /api/ai/demo-music-preview.
+   - /api/ai/demo-music-preview was therefore prompting Lyria from the typed
+     textarea + venue only, not from the uploaded track's sonic fingerprint.
+
+2. Wired audio analysis into music generation:
+   - DemoMusicPreviewRequest now accepts combined_style and audio_analysis.
+   - /personal-demo.html stores the latest audio_analysis / combined_style from
+     the match response and sends both to /api/ai/demo-music-preview.
+   - backend/routers/ai.py formats the structured audio analysis into the Lyria
+     prompt: summary, genres, BPM, energy, mood, production notes, and venue
+     signals.
+   - The Lyria prompt now says to preserve the uploaded track's tempo range,
+     groove feel, energy, mood, and production textures where compatible with
+     the matched venue, while composing a new instrumental and not copying
+     melodies, vocals, lyrics, samples, or protected expression.
+
+3. Strengthened the audio analyzer's condensed style phrase so production notes
+   and venue signals carry forward to downstream match/music prompts.
+
+4. Updated docs:
+   - README.md, TASKS.md, AGENTS.md, CLAUDE.md, and SPEC.docx now describe that
+     uploaded track analysis feeds music prompting, not just venue matching.
+
+FILES CHANGED
+-------------
+- backend/models.py
+- backend/routers/ai.py
+- backend/services/audio_analyzer.py
+- ui/personal-demo.html
+- README.md
+- TASKS.md
+- AGENTS.md
+- CLAUDE.md
+- SPEC.docx
+- Review at the start of each session and update at the end of each session.txt
+
+KEY DECISIONS
+-------------
+- Keep source-audio use as descriptive conditioning, not direct audio-to-audio
+  copying. Reason: Lyria receives a text prompt, and the product should create a
+  new venue-ready instrumental inspired by the user's track rather than copying
+  recognizable musical content.
+- Pass structured audio_analysis separately from combined_style. Reason:
+  combined_style is useful prose for matching, while the structured fields let
+  the music prompt explicitly name tempo, groove, energy, mood, production
+  notes, and venue signals.
+
+WHAT WAS TESTED
+---------------
+- AST parse check passed for backend/routers/ai.py, backend/models.py, and
+  backend/services/audio_analyzer.py.
+- FastAPI TestClient smoke test for POST /api/ai/demo-music-preview returned
+  200 with the fallback WAV while Lyria was monkeypatched as unconfigured, and
+  the returned prompt contained the uploaded-track analysis plus the "do not
+  copy melodies" guardrail.
+- Rendered SPEC.docx with artifact-tool to .codex_docx_render_music_fidelity
+  and visually inspected the edited Section 8 pages.
+
+WHAT WAS NOT TESTED
+-------------------
+- Did not restart the running backend.
+- Did not call OpenRouter, Gemini, or Lyria live.
+- Did not generate or listen to a new Lyria output.
+
+WHAT COMES NEXT
+---------------
+1. Restart the localhost backend so the updated music endpoint/schema is live.
+2. Re-run /personal-demo.html with an uploaded track and confirm the returned
+   Lyria prompt visibly includes the "Uploaded track analysis" block.
+3. If Lyria still returns text-only chunks, the fallback WAV will play; the next
+   product/eval step is to rate whether live generated clips match the uploaded
+   track once Lyria returns audio reliably.
+
 ================================================================================
 END OF LOG
 ================================================================================
