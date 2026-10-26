@@ -16,7 +16,7 @@ The platform is designed to reduce the friction of booking the right DJ for the 
 - **AI Promo Prompts** — generates promo-content prompts tailored to a DJ's brand and a venue's vibe
 - **Party Simulation Text** — produces descriptive scene text used to seed downstream video tools
 - **Audio-driven Venue Match** — performers can upload a track on `/personal-demo.html`; an audio-input LLM (`google/gemini-2.5-flash` via OpenRouter) listens to the first 30s and returns a structured style read (genres, BPM, energy, mood, production notes, venue archetypes) that augments the typed style for venue matching and downstream music prompting
-- **AI Music Previews** — Google Lyria 3 generates a ~30s instrumental clip tailored to the matched venue + performer style, using the uploaded track analysis as the musical fingerprint when available (routed through OpenRouter; `google/lyria-3-clip-preview`; preview pricing currently $0/call, expected ~$0.04/clip when GA)
+- **AI Music Previews** — Google Lyria 3 generates a venue-tailored music clip (full-length song with the Pro model, ~30 s loop with the older Clip model) using the uploaded track analysis as the musical fingerprint. Lyria mirrors the source's vocal/instrumental character — vocal hooks when the upload has a singer, instrumental otherwise — without copying the original melody, lyrics, samples, or singer's voice. Routed through OpenRouter; default model is `google/lyria-3-pro-preview` (~$0.08/song; the cheaper `google/lyria-3-clip-preview` is still selectable via `OPENROUTER_MUSIC_MODEL`).
 - **Personalized video previews** — OpenRouter video generation submits an async reference-video job conditioned on the matched venue's photo, for the class demo (`bytedance/seedance-2.0`, 720p, 10 s, silent — `generate_audio: false`). The Lyria clip is synced in the browser and, when `ffmpeg` is available, muxed into a downloadable MP4. Performer photos are uploaded for UX continuity but not forwarded to the model — Seedance/Veo/Sora reject real-person images via content moderation; the rendered DJ is a generic stand-in. See SPEC §9.6.
 - **Booking Confirmation Emails** — n8n workflow sends templated emails to both DJ and venue when a booking inquiry is submitted
 - **Marketplace UI** — Clean, intuitive interface built with Stitch (Tailwind CSS)
@@ -34,7 +34,7 @@ The platform is designed to reduce the friction of booking the right DJ for the 
 | SQLite | v1 — live | Lightweight database for MVP |
 | [n8n](https://n8n.io) | **v1 — live** | Workflow automation — booking confirmation emails (DJ + venue) on every booking inquiry |
 | [OpenAI Codex](https://platform.openai.com/docs/guides/code) | dev tool | AI-assisted code generation used during development; not a runtime feature |
-| [Google Lyria 3](https://openrouter.ai/google/lyria-3-clip-preview) | **v1 — live** | AI music generation (instrumental clips) routed through OpenRouter; default model `google/lyria-3-clip-preview`. Requires `modalities: ["text","audio"]` + `stream: true` to return audio. |
+| [Google Lyria 3](https://openrouter.ai/google/lyria-3-pro-preview) | **v1 — live** | AI music generation routed through OpenRouter; default model `google/lyria-3-pro-preview` (~$0.08/song, full-length output, can produce vocal melodies). The lighter `google/lyria-3-clip-preview` (~30 s loop, preview pricing currently $0/call, ~$0.04/clip when GA) is still selectable via `OPENROUTER_MUSIC_MODEL`. Requires `modalities: ["text","audio"]` + `stream: true` to return audio. |
 | [OpenRouter Video](https://openrouter.ai/docs/guides/overview/multimodal/video-generation) | **v1 — live** (class demo) | Async AI video generation; default model `bytedance/seedance-2.0`, 720p / 10 s, silent (`generate_audio: false`). Observed wall-clock ~140 s per clip. The matched venue's photo is sent as the visual reference; performer photos are *not* (Seedance/Veo/Sora all refuse images of real people via content moderation — see SPEC §9.6). |
 | [ElevenLabs](https://elevenlabs.io) | v2 | Voice synthesis for DJ intros, narration, voice matching |
 
@@ -140,7 +140,8 @@ OpenRouter video, music, and audio-input generation all use the same
 `OPENROUTER_VIDEO_RESOLUTION`, `OPENROUTER_VIDEO_DURATION`, and
 `OPENROUTER_VIDEO_ASPECT_RATIO` in `.env` to control the personalized
 performance-video demo. `OPENROUTER_MUSIC_MODEL` controls Lyria (default
-`google/lyria-3-clip-preview`); `OPENROUTER_AUDIO_MODEL` controls the
+`google/lyria-3-pro-preview`; switch to `google/lyria-3-clip-preview` for the
+cheaper ~30 s loop variant); `OPENROUTER_AUDIO_MODEL` controls the
 audio-input model used for the "listen to my track" step (default
 `google/gemini-2.5-flash`). Set `FFMPEG_PATH` if `ffmpeg` is not on PATH;
 `POST /api/ai/demo-performance-video/mux` uses it to bake the Lyria

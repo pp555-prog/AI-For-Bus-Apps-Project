@@ -2,11 +2,15 @@
 
 Routes through OpenRouter's chat-completions endpoint with audio output.
 The active music model is set via OPENROUTER_MUSIC_MODEL (default:
-google/lyria-3-clip-preview, ~30s clip). To return audio, OpenRouter requires
-both `modalities: ["text", "audio"]` and `stream: true`. The audio arrives
-inside the stream as one or more `delta.audio.data` base64 chunks; we
+google/lyria-3-pro-preview, full-length song; clip-preview was the previous
+default and is still selectable via the env var). To return audio, OpenRouter
+requires both `modalities: ["text", "audio"]` and `stream: true`. The audio
+arrives inside the stream as one or more `delta.audio.data` base64 chunks; we
 concatenate them and detect the actual format from the magic bytes (Lyria
-typically returns MP3 even when WAV is requested).
+typically returns MP3 even when WAV is requested). Lyria 3 Pro can generate
+vocal melodies when the prompt asks for them; the personalized demo's prompt
+in `backend/routers/ai.py` instructs Lyria to mirror the uploaded track's
+vocal vs instrumental nature instead of forcing instrumental-only output.
 """
 
 from __future__ import annotations

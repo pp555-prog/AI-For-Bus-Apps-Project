@@ -649,14 +649,16 @@ async def demo_music_preview(request: DemoMusicPreviewRequest):
         f"\n\n{audio_guidance}\n"
         "Use that uploaded-track analysis as the primary musical fingerprint: "
         "preserve its tempo range, groove feel, energy, mood, and production textures "
-        "where compatible with the venue. Compose a NEW instrumental clip inspired by "
-        "those qualities; do not copy melodies, vocals, lyrics, samples, or any "
-        "recognizable protected expression from the uploaded track."
+        "where compatible with the venue. Compose a NEW clip inspired by those "
+        "qualities; if the source has vocals, carry that vocal energy into the new "
+        "clip via club-style hooks, chants, or ad-libs. Do not copy melodies, "
+        "lyrics, samples, or any recognizable protected expression from the "
+        "uploaded track."
         if audio_guidance
         else ""
     )
     prompt = (
-        f"Compose a 30-second instrumental music clip for a DJ named {request.performer_name} "
+        f"Compose a 30-second music clip for a DJ named {request.performer_name} "
         f"performing at {venue.name} in {venue.city or 'the city'}. "
         f"Performer style and match context: {performer_style}. "
         f"Venue atmosphere: {', '.join(venue.vibe_tags) or 'club, electronic'}. "
@@ -664,15 +666,25 @@ async def demo_music_preview(request: DemoMusicPreviewRequest):
         f"{audio_direction}\n\n"
         "Make the output feel like a venue-ready extension of the uploaded track's "
         "sonic identity, adapted to this room. Produce a peak-time club loop with a "
-        "clear groove and club-soundsystem low end. No vocals. No spoken word. "
-        "Instrumental only."
+        "clear groove and club-soundsystem low end. If the uploaded track analysis "
+        "above mentions vocals, a singer, a vocal line, or a sung melody, the new "
+        "clip MUST also feature vocal elements -- club-style hooks, chants, ad-libs, "
+        "or vocal textures -- in a register that matches the source (e.g. soulful, "
+        "gritty, airy, gospel, etc.). Do not produce an instrumental-only output "
+        "when the source has vocals; the vocal energy is part of what we are "
+        "extending. Constraints: no full lyrics or verses, no copy of any specific "
+        "singer's voice or melody from the uploaded track, no named artists or "
+        "brands. If the uploaded track is purely instrumental, keep the new clip "
+        "instrumental too."
     )
+
+    music_provider = settings.OPENROUTER_MUSIC_MODEL.split("/", 1)[-1]
 
     if not lyria_client.is_configured():
         return DemoMusicPreviewResponse(
             audio_url=MUSIC_FALLBACK_URL,
             prompt=prompt,
-            provider="lyria-3-clip-preview",
+            provider=music_provider,
             generated=False,
             note="Demo asset; live generation requires API credentials.",
         )
@@ -683,7 +695,7 @@ async def demo_music_preview(request: DemoMusicPreviewRequest):
         return DemoMusicPreviewResponse(
             audio_url=MUSIC_FALLBACK_URL,
             prompt=prompt,
-            provider="lyria-3-clip-preview",
+            provider=music_provider,
             generated=False,
             note="Live music generation produced no audio; using the fallback soundtrack.",
         )
@@ -703,7 +715,7 @@ async def demo_music_preview(request: DemoMusicPreviewRequest):
         audio_url=audio_url,
         audio_data_url=audio_data_url,
         prompt=prompt,
-        provider="lyria-3-clip-preview",
+        provider=music_provider,
         generated=True,
         note="Music preview ready.",
     )
@@ -795,7 +807,7 @@ async def music_preview(request: MusicPreviewRequest):
 
     return DemoAssetResponse(
         audio_url=MUSIC_FALLBACK_URL,
-        provider="lyria-3-clip-preview",
+        provider=settings.OPENROUTER_MUSIC_MODEL.split("/", 1)[-1],
         generated=False,
         note=DEMO_ASSET_NOTE,
     )

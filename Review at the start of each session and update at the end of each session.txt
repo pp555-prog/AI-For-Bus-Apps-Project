@@ -3830,6 +3830,133 @@ WHAT COMES NEXT
    product/eval step is to rate whether live generated clips match the uploaded
    track once Lyria returns audio reliably.
 
+--------------------------------------------------------------------------------
+SESSION 44 - Lyria 3 Pro Switch + Vocal-Aware Prompt + UI/Doc Sync
+Date:    2026-05-07
+Agent:   Claude Sonnet 4.6 (worktree claude/frosty-davinci-5fb1c6)
+--------------------------------------------------------------------------------
+
+WHAT WAS DONE
+-------------
+1. Diagnosed why Lyria was returning instrumental output even after SESSION 43
+   added "vocal mirroring" guidance: the demo-music-preview prompt in
+   backend/routers/ai.py still said "instrumental" twice in earlier sentences
+   ("Compose a NEW instrumental clip ..." in the audio-direction block and
+   "Compose a 30-second instrumental music clip ..." at the top of the user
+   prompt). Both contradicted the later vocal-MUST clause.
+   - Removed both "instrumental" mentions from the audio-direction block and
+     the prompt opener. The remaining mentions are conditional ("if the
+     uploaded track is purely instrumental, keep the new clip instrumental
+     too") and only fire when the source is purely instrumental.
+   - Verified ast.parse on backend/routers/ai.py.
+
+2. Switched the music model default from google/lyria-3-clip-preview to
+   google/lyria-3-pro-preview in backend/config.py. Pro is the full-length,
+   vocal-capable variant; Clip is the older ~30 s loop. Cost shifts from
+   preview-priced ($0/call) to ~$0.08 per generation; length shifts from a
+   30 s loop to a full-length song. The clip-preview model is still selectable
+   via OPENROUTER_MUSIC_MODEL.
+
+3. Replaced the hardcoded provider="lyria-3-clip-preview" strings in
+   backend/routers/ai.py (3 sites in /demo-music-preview, 1 site in the
+   legacy /music-preview fallback) with a dynamic value derived from
+   settings.OPENROUTER_MUSIC_MODEL.split("/", 1)[-1], so the response field
+   tracks whichever Lyria model is actually configured.
+
+4. Updated backend/services/lyria_client.py module docstring to name the new
+   default model and explain that Lyria 3 Pro can produce vocal melodies when
+   the prompt asks for them.
+
+5. Doc sync — replaced every stale "lyria-3-clip-preview" / "$0.04 per clip" /
+   "30s instrumental" reference in:
+   - README.md (Key Features bullet, Tech Stack table, Configuration block)
+   - AGENTS.md (architecture summary, demo-flow paragraph, video-generation
+     cost note)
+   - CLAUDE.md (live-music-generation note, audio-informed Lyria prompting
+     note; added a new garment-analyzer graceful-degradation note)
+   - TASKS.md (v1 Live row, v2 live-music-endpoint row, caching backlog row)
+   - SPEC.docx (§8 class demo paragraph 76, §8 OpenRouter-summary
+     paragraph 77, §8 Lyria row in the AI integrations table). Used
+     python-docx via .claude/update_spec.py; verification asserts confirm the
+     new Pro model name + vocal mirroring language are present and the stale
+     "instrumental music clip" wording is gone.
+
+6. Documented two product behaviors that landed earlier in the conversation
+   but were not yet in the docs:
+   - The Lyria prompt is rendered into /personal-demo.html inside a
+     collapsible <details><summary>View prompt sent to Lyria 3</summary> so
+     the long block is hidden by default. Documented in AGENTS.md, CLAUDE.md,
+     TASKS.md, and SPEC §8 paragraph 76.
+   - garment_analyzer.py now runs JSON-structural repair (missing-comma fix,
+     truncated-tail trim, brace/bracket close) and a regex-based partial
+     extractor before raising; this prevents "Photo analysis failed" on stage
+     when Gemini returns malformed JSON. Documented in AGENTS.md, CLAUDE.md,
+     and SPEC §8 paragraph 76.
+
+FILES CHANGED
+-------------
+- backend/config.py                                   (Lyria default → Pro)
+- backend/routers/ai.py                               (instrumental→vocal-mirror; provider str dynamic)
+- backend/services/lyria_client.py                    (docstring)
+- README.md                                           (Lyria copy x3)
+- AGENTS.md                                           (Lyria + demo-flow + cost)
+- CLAUDE.md                                           (Lyria + garment fallback)
+- TASKS.md                                            (Lyria v1 + v2 + caching)
+- SPEC.docx                                           (§8 paragraphs 76/77 + Lyria table cell)
+- ui/personal-demo.html                               (already collapsed in prior turn; documented here)
+- backend/services/garment_analyzer.py                (already added repair earlier; documented here)
+- .claude/worktrees/frosty-davinci-5fb1c6/.claude/update_spec.py (new helper for SPEC edit)
+- Review at the start of each session and update at the end of each session.txt
+
+KEY DECISIONS
+-------------
+- Pro over Clip as the runtime default. The user explicitly asked to switch
+  models after the vocal-prompt fix alone failed to produce vocals; Pro is
+  the path that actually unlocks vocal generation. Cost is documented; the
+  cheaper Clip variant remains a one-env-var swap.
+- Provider string sourced from settings, not hardcoded. Avoids the same
+  drift bug Pro/Clip just exposed; the API response now reports whatever
+  model the request actually used.
+- Prompt instrumental contradictions removed at the source instead of trying
+  to override with stronger downstream language. Models routinely follow the
+  first-stated constraint over the last; conflicting constraints in the same
+  prompt is the root cause, not a tuning opportunity.
+- SPEC.docx edited via python-docx run-by-run replacement to preserve
+  paragraph styling (Body Text base style). Each target was a single-run
+  paragraph, so an in-place run.text replacement was safe.
+
+WHAT WAS TESTED
+---------------
+- ast.parse OK on backend/routers/ai.py, backend/services/lyria_client.py,
+  backend/config.py.
+- python-docx round-trip: re-opened SPEC.docx after save and asserted that
+  "lyria-3-pro-preview" + "vocal mirroring" are present, and the old
+  "instrumental music clip tailored" wording is gone (Lyria cell).
+- Cross-doc grep scan for "lyria-3-clip-preview", "$0.04", and "30-second
+  instrumental" in *.md / *.txt / *.py / *.html under the project root.
+  Remaining mentions are intentional historical references (CLAUDE.md note
+  about the older default; SPEC §8 row mentions Clip as still-selectable;
+  session log entries 1917/1942 documenting prior pricing).
+
+WHAT WAS NOT TESTED
+-------------------
+- Did not run python run.py against live Lyria Pro to confirm vocals appear.
+  The user is testing this in their session.
+- Did not regenerate NOCTURNE_presentation.pptx — its Lyria slide refers to
+  the model generically ("Lyria 3"), so the swap doesn't invalidate the deck.
+- Did not run any §9.x eval. None depend on the Lyria model.
+
+WHAT COMES NEXT
+---------------
+1. User confirms vocals now appear in the live Lyria Pro output on
+   /personal-demo.html.
+2. If $0.08/song is unacceptable for the demo budget, flip
+   OPENROUTER_MUSIC_MODEL=google/lyria-3-clip-preview in .env and re-run.
+3. Open the GitHub PR for branch claude/frosty-davinci-5fb1c6 (gh CLI is
+   not installed locally; use the URL printed by `git push`).
+4. Optional: re-render NOCTURNE_presentation.pptx if any slide copy needs
+   to mention "Lyria 3 Pro" specifically.
+
 ================================================================================
 END OF LOG
 ================================================================================

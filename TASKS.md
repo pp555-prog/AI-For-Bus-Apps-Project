@@ -28,7 +28,7 @@ These are working in the deployed product.
 
 - **Real-person photos blocked at submit time.** Seedance 2.0, Veo 3.1, and Sora 2 all refuse `input_references` containing identifiable people via the `"InputImageSensitiveContentDetected.PrivacyInformation"` policy. Backend therefore sends only the venue image_url; the rendered DJ is a generic stand-in. The `identity_preservation` rubric dimension is N/A under this constraint and is scored as neutral `3` for comparability.
 - **Data URL size limit.** OpenRouter video silently returns `id: null` for image payloads above ~2 MB. Eval auto-resizes photos to ≤1024 px JPEG via Pillow (`Pillow>=10` is in `requirements.txt`).
-- [x] **Lyria 3 music previews** — `POST /api/ai/demo-music-preview` generates a ~30s instrumental clip per matched venue via OpenRouter (`google/lyria-3-clip-preview`; preview pricing currently $0/call, published ~$0.04/clip when GA). When the user uploaded a track, the prompt includes the structured audio analysis as the primary musical fingerprint. Streaming + `modalities:["text","audio"]` required.
+- [x] **Lyria 3 music previews** — `POST /api/ai/demo-music-preview` generates a venue-tailored music clip per matched venue via OpenRouter. Default model is `google/lyria-3-pro-preview` (~$0.08/song, full-length, vocal-capable); the lighter `google/lyria-3-clip-preview` (~30 s loop, preview pricing currently $0/call, ~$0.04/clip when GA) is still selectable via `OPENROUTER_MUSIC_MODEL`. When the user uploaded a track, the prompt includes the structured audio analysis as the primary musical fingerprint and tells Lyria to mirror the source's vocal vs instrumental nature (vocal hooks if the source has vocals, instrumental otherwise) without copying melodies, lyrics, samples, or any singer's voice. Streaming + `modalities:["text","audio"]` required. The full prompt is rendered into the music panel inside a collapsible `<details>` toggle so the long block stays hidden by default.
 - [x] **Personalized OpenRouter video** — `POST /api/ai/demo-performance-video` + polling endpoint generate a Seedance 2.0 reference-video conditioned on the matched venue's photo (default 720p/10s silent, `generate_audio: false`, ~$1.51 per clip, ~140 s wall-clock). The Lyria/fallback clip is synced in the browser and can be muxed into the final MP4 via ffmpeg. The shipped prompt is **Multi-Shot** (Establish → Develop → Payoff afterparty arc per Seedance 2.0 Handbook p.8).
   - **Venue image only** goes into `input_references`. Performer photos are accepted by the frontend for UX continuity but the backend does NOT forward them to Seedance — see the §9.6 Known Limitations below for the moderation policy that blocks real-person photos.
   - Currently uses the single `Venue.image_url` field. A multi-image upgrade (`Venue.image_urls: list[str]`, JSON-typed column matching the `genres` / `vibe_keywords` pattern, 2–3 photos per venue) is a natural follow-up.
@@ -103,12 +103,15 @@ Documented in SPEC §8 with `[v2]` tags. Build only after v1 is complete.
 - [~] **Suno API integration** — DROPPED. No official public Suno API; project
   chose Google Lyria 3 via OpenRouter for the single-key architecture instead.
 - [x] **Live music endpoint** — `POST /api/ai/demo-music-preview` calls Lyria 3
-  live and returns the generated clip (`google/lyria-3-clip-preview`).
+  live and returns the generated clip (default `google/lyria-3-pro-preview`,
+  full-length and vocal-capable; `google/lyria-3-clip-preview` for the cheaper
+  ~30 s loop variant).
 - [x] **UI: preview player** on the personalized demo (`/personal-demo.html`)
   fires automatically when the user picks a venue match.
 - [ ] **Caching** — Lyria clips are not cached; each match triggers a fresh
-  generation (preview pricing currently $0; ~$0.04 per clip when GA). Add a
-  `(venue_id, style_hash)`-keyed cache if cost or latency becomes an issue.
+  generation. Pro model bills ~$0.08/song; the older Clip model is still
+  preview-priced ($0/call, ~$0.04/clip when GA). Add a `(venue_id, style_hash,
+  model_id)`-keyed cache if cost or latency becomes an issue.
 
 ### OpenRouter Video — AI party simulation videos
 

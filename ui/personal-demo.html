@@ -101,7 +101,10 @@
         <p class="text-xs font-bold uppercase tracking-[0.3em] text-gold">Generated venue track</p>
         <h2 id="musicTitle" class="mt-2 font-headline text-3xl font-bold">Composing your venue track</h2>
         <p id="musicNote" class="mt-3 text-sm leading-6 text-muted"></p>
-        <p id="musicPrompt" class="mt-3 hidden rounded-lg border border-line/60 bg-background px-3 py-2 text-xs leading-5 text-muted"></p>
+        <details id="musicPrompt" class="mt-3 hidden rounded-lg border border-line/60 bg-background px-3 py-2 text-xs leading-5 text-muted">
+          <summary class="cursor-pointer select-none font-bold uppercase tracking-widest text-[10px] text-gold hover:text-text">View prompt sent to Lyria 3</summary>
+          <p id="musicPromptBody" class="mt-2 whitespace-pre-wrap"></p>
+        </details>
         <div id="musicOutput" class="mt-5"></div>
       </div>
 
@@ -144,6 +147,7 @@
     const musicTitle = document.getElementById("musicTitle");
     const musicNote = document.getElementById("musicNote");
     const musicPromptEl = document.getElementById("musicPrompt");
+    const musicPromptBodyEl = document.getElementById("musicPromptBody");
     const musicOutput = document.getElementById("musicOutput");
     const videoPanel = document.getElementById("videoPanel");
     const videoTitle = document.getElementById("videoTitle");
@@ -370,7 +374,8 @@
       musicTitle.textContent = "Composing your venue track";
       musicNote.textContent = "Generating a ~30s instrumental tailored to the matched venue. This usually takes a few seconds.";
       musicPromptEl.classList.add("hidden");
-      musicPromptEl.textContent = "";
+      musicPromptEl.open = false;
+      musicPromptBodyEl.textContent = "";
       musicOutput.innerHTML = "";
 
       let response;
@@ -401,10 +406,10 @@
       musicTitle.textContent = data.generated ? "Your venue track" : "Demo music asset";
       musicNote.textContent = data.note || "";
       if (data.prompt && data.generated) {
-        musicPromptEl.textContent = "Prompt: " + data.prompt;
+        musicPromptBodyEl.textContent = data.prompt;
         musicPromptEl.classList.remove("hidden");
       } else {
-        musicPromptEl.textContent = "";
+        musicPromptBodyEl.textContent = "";
         musicPromptEl.classList.add("hidden");
       }
       const src = data.audio_data_url || data.audio_url;

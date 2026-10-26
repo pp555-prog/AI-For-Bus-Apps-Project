@@ -10,7 +10,7 @@ class Settings(BaseSettings):
     OPENROUTER_VIDEO_RESOLUTION: str = "720p"
     OPENROUTER_VIDEO_DURATION: int = 10
     OPENROUTER_VIDEO_ASPECT_RATIO: str = "16:9"
-    OPENROUTER_MUSIC_MODEL: str = "google/lyria-3-clip-preview"
+    OPENROUTER_MUSIC_MODEL: str = "google/lyria-3-pro-preview"
     OPENROUTER_AUDIO_MODEL: str = "google/gemini-2.5-flash"
     OPENROUTER_VISION_MODEL: str = "google/gemini-2.5-flash"
     FFMPEG_PATH: str = "ffmpeg"

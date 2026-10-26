@@ -131,13 +131,67 @@ async def analyze(image_data_urls: list[str]) -> dict:
     cleaned = _strip_fences(content or "")
     try:
         data = json.loads(cleaned)
-    except json.JSONDecodeError as exc:
-        raise GarmentAnalyzerError(
-            f"Vision model returned non-JSON content: {cleaned[:300]}"
-        ) from exc
+    except json.JSONDecodeError:
+        # Gemini sometimes drops a comma between fields or truncates a long
+        # response. First try a structural repair, then fall back to regex-
+        # extracting whatever fields we can find. Only raise if neither path
+        # surfaces anything usable -- a partial wardrobe read still renders
+        # cleanly in the demo, "Photo analysis failed" does not.
+        try:
+            data = json.loads(_try_repair_json(cleaned))
+        except json.JSONDecodeError:
+            data = _extract_partial(cleaned)
+            if not data:
+                raise GarmentAnalyzerError(
+                    f"Vision model returned non-JSON content: {cleaned[:300]}"
+                )
 
     data["style_phrase"] = _condense_style(data)
     return data
+
+
+def _try_repair_json(text: str) -> str:
+    """Best-effort fix for the two malformations Gemini commonly produces:
+    a missing comma between a string value and the next key, and a truncated
+    tail (missing closing braces/brackets)."""
+    # Insert missing comma between `"..."` (string value) and `"key":` on
+    # the same or next line. Same for `]` or `}` followed by `"key":`.
+    text = re.sub(r'("[^"]*")(\s+)("[^"]+"\s*:)', r'\1,\2\3', text)
+    text = re.sub(r'(\])(\s+)("[^"]+"\s*:)', r'\1,\2\3', text)
+    text = re.sub(r'(\})(\s+)("[^"]+"\s*:)', r'\1,\2\3', text)
+    # Drop a truncated tail: anything from the last comma to end of string
+    # that doesn't close cleanly (the most common Gemini failure mode is
+    # ending mid-field, e.g. `... "linen", "` or `... "x":` with no value).
+    text = re.sub(r',\s*"[^"]*"\s*:\s*"?[^"}\]]*$', '', text)
+    text = re.sub(r',\s*"[^"]*"\s*:\s*\[?[^"}\]]*$', '', text)
+    text = re.sub(r',\s*"[^"]*$', '', text)
+    text = re.sub(r',\s*$', '', text)
+    # Strip trailing commas before close (after the truncation cleanup so we
+    # don't leave a `,}` behind)
+    text = re.sub(r',\s*([}\]])', r'\1', text)
+    # Close any unbalanced braces/brackets at the end
+    text = text + ']' * max(0, text.count('[') - text.count(']'))
+    text = text + '}' * max(0, text.count('{') - text.count('}'))
+    return text
+
+
+def _extract_partial(text: str) -> dict:
+    """Last resort: regex-pull whatever fields are visibly present."""
+    out: dict = {}
+    m = re.search(r'"summary"\s*:\s*"([^"]*)"', text)
+    if m:
+        out["summary"] = m.group(1)
+    for field in ("garments", "color_palette", "venue_signals"):
+        m = re.search(rf'"{field}"\s*:\s*\[([^\]]*)\]', text, re.DOTALL)
+        if m:
+            items = re.findall(r'"([^"]+)"', m.group(1))
+            if items:
+                out[field] = items
+    for field in ("material", "style_register"):
+        m = re.search(rf'"{field}"\s*:\s*"([^"]*)"', text)
+        if m:
+            out[field] = m.group(1)
+    return out
 
 
 def _condense_style(analysis: dict) -> str:
