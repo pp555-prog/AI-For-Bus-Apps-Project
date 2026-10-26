@@ -122,7 +122,7 @@ AI-For-Bus-Apps-Project/
 ### Installation
 
 ```bash
-git clone https://github.com/pabloqc98/AI-For-Bus-Apps-Project.git
+git clone https://github.com/pp555-prog/AI-For-Bus-Apps-Project.git
 cd AI-For-Bus-Apps-Project
 pip install -r requirements.txt
 ```

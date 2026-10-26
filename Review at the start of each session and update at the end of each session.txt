@@ -2,7 +2,7 @@
 NOCTURNE — Claude Agent Progress Log
 ================================================================================
 Project: DJ-Venue Marketplace (NBA 6925, Cornell University)
-Repo:    https://github.com/pabloqc98/AI-For-Bus-Apps-Project
+Repo:    https://github.com/pp555-prog/AI-For-Bus-Apps-Project
 Author:  pabloqc98
 
 This file is updated by Claude agents at the end of each working session.
@@ -94,7 +94,7 @@ WHAT COMES NEXT
 ---------------
 1. Complete Render deployment — user needs to:
    a. Go to https://render.com → sign in with GitHub
-   b. New Web Service → connect pabloqc98/AI-For-Bus-Apps-Project
+   b. New Web Service → connect pp555-prog/AI-For-Bus-Apps-Project
    c. Build Command: pip install -r requirements.txt
    d. Start Command: uvicorn backend.main:app --host 0.0.0.0 --port $PORT
    e. Instance Type: Free → Create Web Service
